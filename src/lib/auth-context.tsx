@@ -10,16 +10,7 @@ import {
 import type { Session, User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/auth-types';
 import { fetchProfile, isProfileComplete } from '@/lib/profile';
-import { supabase } from '@/lib/supabase';
-
-const isSupabaseConfigured = Boolean(
-  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
-);
-
-function getAuthRedirectUrl(): string {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-  return `${window.location.origin}${base}/auth/callback`;
-}
+import { getAuthRedirectUrl, isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 type AuthStatus = 'loading' | 'unauthenticated' | 'onboarding' | 'authenticated';
 
