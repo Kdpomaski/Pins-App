@@ -2,6 +2,16 @@ import { useState } from "react";
 import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil } from "lucide-react";
 import { usePinsStore, InventoryItem } from "@/lib/store";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Preset frequency options
 const FREQ_OPTIONS = ["Daily", "2x/day", "Every other day", "3x/week", "2x/week", "Weekly", "Bi-weekly", "Monthly"];
@@ -9,6 +19,17 @@ const FREQ_OPTIONS = ["Daily", "2x/day", "Every other day", "3x/week", "2x/week"
 export default function Inventory() {
   const { data, addInventoryItem, deleteInventoryItem } = usePinsStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<InventoryItem | null>(null);
+
+  const pendingScheduleCount = pendingDelete
+    ? data.schedule.filter((dose) => dose.compound === pendingDelete.name).length
+    : 0;
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    deleteInventoryItem(pendingDelete.id);
+    setPendingDelete(null);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-24 pt-6 px-4">
@@ -38,7 +59,7 @@ export default function Inventory() {
               <InventoryCard
                 key={item.id}
                 item={item}
-                onDelete={() => deleteInventoryItem(item.id)}
+                onDelete={() => setPendingDelete(item)}
               />
             ))
           )}
@@ -50,6 +71,30 @@ export default function Inventory() {
           <AddInventoryModal onClose={() => setIsAddModalOpen(false)} onAdd={addInventoryItem} />
         )}
       </AnimatePresence>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {pendingDelete?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the vial from your inventory
+              {pendingScheduleCount > 0
+                ? ` and deletes ${pendingScheduleCount} scheduled dose${pendingScheduleCount === 1 ? "" : "s"} for this compound.`
+                : "."}
+              {" "}Past injection logs are kept.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

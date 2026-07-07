@@ -188,10 +188,16 @@ export function PinsProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteInventoryItem = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      inventory: prev.inventory.filter((item) => item.id !== id),
-    }));
+    setData((prev) => {
+      const item = prev.inventory.find((entry) => entry.id === id);
+      if (!item) return prev;
+
+      return {
+        ...prev,
+        inventory: prev.inventory.filter((entry) => entry.id !== id),
+        schedule: prev.schedule.filter((dose) => dose.compound !== item.name),
+      };
+    });
   };
 
   if (!ready) {
