@@ -1,8 +1,7 @@
 import type { AgeRange, Gender, UserProfile } from '@/lib/auth-types';
-import { getSupabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export async function fetchProfile(userId: string): Promise<UserProfile | null> {
-  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('profiles')
     .select('id, age_range, gender, terms_accepted_at, created_at, updated_at')
@@ -21,7 +20,6 @@ export async function upsertProfile(
   userId: string,
   input: { age_range: AgeRange; gender: Gender; terms_accepted_at: string },
 ): Promise<UserProfile> {
-  const supabase = getSupabase();
   const now = new Date().toISOString();
 
   const { data, error } = await supabase

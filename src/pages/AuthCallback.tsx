@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
-import { getSupabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function AuthCallback() {
   const [, setLocation] = useLocation();
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const supabase = getSupabase();
-
     const finish = () => setLocation('/');
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
