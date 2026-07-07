@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/verify-public.mjs && vite build && node -e \"require('fs').accessSync('dist/index.html')\"",
+    "build": "node scripts/verify-public.mjs && vite build && node scripts/verify-dist.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
