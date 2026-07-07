@@ -23,7 +23,6 @@ const allRegions: Region[] = [
   // Front
   { id: 'left-deltoid', label: 'Left Deltoid', view: 'front', x: 18, y: 21 },
   { id: 'right-deltoid', label: 'Right Deltoid', view: 'front', x: 82, y: 21 },
-  // Abdomen — 3 tiers × left/right
   { id: 'upper-left-abdomen', label: 'Upper Left Abdomen', view: 'front', x: 40, y: 31 },
   { id: 'upper-right-abdomen', label: 'Upper Right Abdomen', view: 'front', x: 60, y: 31 },
   { id: 'mid-left-abdomen', label: 'Mid Left Abdomen', view: 'front', x: 40, y: 37 },
@@ -32,7 +31,7 @@ const allRegions: Region[] = [
   { id: 'lower-right-abdomen', label: 'Lower Right Abdomen', view: 'front', x: 60, y: 43 },
   { id: 'left-quadriceps', label: 'Left Quadriceps', view: 'front', x: 37, y: 62 },
   { id: 'right-quadriceps', label: 'Right Quadriceps', view: 'front', x: 63, y: 62 },
-  // Back — side-by-side image, right figure
+  // Back
   { id: 'left-triceps', label: 'Left Triceps', view: 'back', x: 20, y: 25 },
   { id: 'right-triceps', label: 'Right Triceps', view: 'back', x: 80, y: 25 },
   { id: 'left-glute', label: 'Left Glute', view: 'back', x: 38, y: 49 },
@@ -53,13 +52,13 @@ const BodyMap: React.FC<{ onLogInjection?: (siteId: string) => void; logs?: Inje
       .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
   const getStatusColor = (siteLogs: InjectionLog[]) => {
-    if (siteLogs.length === 0) return null;
+    if (siteLogs.length === 0) return 'rgba(74, 222, 128, 0.5)'; // Green 50% - no shot in 7 days
 
     const hoursAgo = (Date.now() - new Date(siteLogs[0].time).getTime()) / (1000 * 60 * 60);
 
-    if (hoursAgo <= 24) return '#ef4444';
-    if (hoursAgo <= 168) return '#eab308';
-    return 'rgba(74, 222, 128, 0.9)';
+    if (hoursAgo <= 24) return '#ef4444';      // Red - within 24h
+    if (hoursAgo <= 72) return '#eab308';      // Yellow - within 3 days
+    return 'rgba(74, 222, 128, 0.5)';          // Green - older than 3 days
   };
 
   const regions = allRegions.filter((r) => r.view === view);
@@ -70,32 +69,20 @@ const BodyMap: React.FC<{ onLogInjection?: (siteId: string) => void; logs?: Inje
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold tracking-tight">Body Map</h2>
           <Button variant="outline" className="border-border" onClick={() => setView(view === 'front' ? 'back' : 'front')}>
-            {view === 'front' ? '↔ Back View' : '↔ Front View'}
+            {view === 'front' ? 'Back View' : 'Front View'}
           </Button>
         </div>
 
         <div className="relative rounded-2xl overflow-hidden border border-border aspect-[2/3] bg-black">
           {view === 'front' ? (
-            <img
-              src="/body-map/front.jpeg"
-              alt="Front body map"
-              className="absolute inset-0 w-full h-full object-contain"
-              draggable={false}
-            />
+            <img src="/body-map/front.jpeg" alt="Front body map" className="absolute inset-0 w-full h-full object-contain" draggable={false} />
           ) : (
-            <img
-              src="/body-map/back-full.jpeg"
-              alt="Back body map"
-              className="absolute top-0 h-full w-[200%] max-w-none object-contain"
-              style={{ left: '-100%' }}
-              draggable={false}
-            />
+            <img src="/body-map/back-full.jpeg" alt="Back body map" className="absolute top-0 h-full w-[200%] max-w-none object-contain" style={{ left: '-100%' }} draggable={false} />
           )}
 
           {regions.map((r) => {
             const siteLogs = getSiteLogs(r.id);
-            const pinColor = getStatusColor(siteLogs);
-            const hasPin = pinColor !== null;
+            const color = getStatusColor(siteLogs);
 
             return (
               <button
@@ -104,17 +91,14 @@ const BodyMap: React.FC<{ onLogInjection?: (siteId: string) => void; logs?: Inje
                 onClick={() => onLogInjection?.(r.id)}
                 aria-label={`Log injection at ${r.label}`}
                 title={r.label}
-                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary"
+                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/80 focus:outline-none focus:ring-2 focus:ring-primary"
                 style={{
                   left: `${r.x}%`,
                   top: `${r.y}%`,
-                  width: hasPin ? '4.2%' : '6.3%',
-                  minWidth: hasPin ? 13 : 20,
-                  minHeight: hasPin ? 13 : 20,
-                  aspectRatio: '1',
-                  backgroundColor: hasPin ? pinColor : 'transparent',
-                  border: hasPin ? '1.5px solid rgba(255,255,255,0.9)' : '2px solid transparent',
-                  boxShadow: hasPin ? '0 0 6px rgba(0,0,0,0.45)' : 'none',
+                  width: '3.8%',           // ~10% smaller than before
+                  height: '3.8%',
+                  backgroundColor: color,
+                  boxShadow: '0 0 6px rgba(0,0,0,0.4)',
                   cursor: 'pointer',
                 }}
               />
@@ -123,24 +107,10 @@ const BodyMap: React.FC<{ onLogInjection?: (siteId: string) => void; logs?: Inje
         </div>
 
         <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs font-semibold uppercase tracking-wider border border-border rounded-xl p-3 bg-muted/30">
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full border border-border bg-transparent" />
-            No pin yet
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full" style={{ background: 'rgba(74, 222, 128, 0.9)' }} />
-            Available
-          </span>
-          <span className="flex items-center gap-1.5 text-yellow-600">
-            <span className="w-3 h-3 rounded-full bg-yellow-500" />
-            Recent
-          </span>
-          <span className="flex items-center gap-1.5 text-red-600">
-            <span className="w-3 h-3 rounded-full bg-red-500" />
-            Within 24h
-          </span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full" style={{ background: 'rgba(74,222,128,0.5)' }} /> Safe (7+ days)</span>
+          <span className="flex items-center gap-1.5 text-yellow-600"><span className="w-3 h-3 rounded-full bg-yellow-500" /> Caution (≤ 3 days)</span>
+          <span className="flex items-center gap-1.5 text-red-600"><span className="w-3 h-3 rounded-full bg-red-500" /> Recent (≤ 24h)</span>
         </div>
-        <p className="text-center mt-3 text-sm text-muted-foreground">Tap a body area to log an injection</p>
       </Card>
     </div>
   );
