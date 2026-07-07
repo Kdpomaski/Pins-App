@@ -2,27 +2,46 @@ export type BodySite = {
   id: string;
   label: string;
   view: "front" | "back";
-  cx: number; // dot marker center x — viewBox 0 0 100 150
-  cy: number; // dot marker center y
+  cx: number;
+  cy: number;
 };
 
+/** Sites shown on both front and back body map views */
+export const DUAL_VIEW_SITE_IDS = ["left-knee", "right-knee", "left-ankle", "right-ankle"] as const;
+
 export const bodySites: BodySite[] = [
-  // ── FRONT ──────────────────────────────────────────────────────────────────
-  { id: "right-deltoid",        label: "Right Deltoid",        view: "front", cx: 77, cy: 34 },
-  { id: "left-deltoid",         label: "Left Deltoid",         view: "front", cx: 23, cy: 34 },
-  { id: "upper-right-abdomen",  label: "Upper Right Abdomen",  view: "front", cx: 56, cy: 56 },
-  { id: "upper-left-abdomen",   label: "Upper Left Abdomen",   view: "front", cx: 44, cy: 56 },
-  { id: "mid-right-abdomen",    label: "Mid Right Abdomen",    view: "front", cx: 56, cy: 69 },
-  { id: "mid-left-abdomen",     label: "Mid Left Abdomen",     view: "front", cx: 44, cy: 69 },
-  { id: "lower-right-abdomen",  label: "Lower Right Abdomen",  view: "front", cx: 56, cy: 81 },
-  { id: "lower-left-abdomen",   label: "Lower Left Abdomen",   view: "front", cx: 44, cy: 81 },
-  { id: "right-quadriceps",     label: "Right Quadriceps",     view: "front", cx: 58, cy: 113 },
-  { id: "left-quadriceps",      label: "Left Quadriceps",      view: "front", cx: 42, cy: 113 },
-  // ── BACK ───────────────────────────────────────────────────────────────────
-  { id: "right-triceps",        label: "Right Triceps",        view: "back",  cx: 76, cy: 57 },
-  { id: "left-triceps",         label: "Left Triceps",         view: "back",  cx: 24, cy: 57 },
-  { id: "right-glute",          label: "Right Glute",          view: "back",  cx: 59, cy: 108 },
-  { id: "left-glute",           label: "Left Glute",           view: "back",  cx: 41, cy: 108 },
-  { id: "right-hamstrings",     label: "Right Hamstrings",     view: "back",  cx: 57, cy: 133 },
-  { id: "left-hamstrings",      label: "Left Hamstrings",      view: "back",  cx: 43, cy: 133 },
+  // Front
+  { id: "left-deltoid", label: "Left Deltoid", view: "front", cx: 40, cy: 21 },
+  { id: "right-deltoid", label: "Right Deltoid", view: "front", cx: 60, cy: 21 },
+  { id: "upper-left-abdomen", label: "Upper Left Abdomen", view: "front", cx: 47, cy: 33 },
+  { id: "upper-right-abdomen", label: "Upper Right Abdomen", view: "front", cx: 53, cy: 33 },
+  { id: "mid-left-abdomen", label: "Mid Left Abdomen", view: "front", cx: 47, cy: 39 },
+  { id: "mid-right-abdomen", label: "Mid Right Abdomen", view: "front", cx: 53, cy: 39 },
+  { id: "lower-left-abdomen", label: "Lower Left Abdomen", view: "front", cx: 47, cy: 45 },
+  { id: "lower-right-abdomen", label: "Lower Right Abdomen", view: "front", cx: 53, cy: 45 },
+  { id: "left-flank", label: "Left Flank", view: "front", cx: 40, cy: 45 },
+  { id: "right-flank", label: "Right Flank", view: "front", cx: 60, cy: 45 },
+  { id: "left-wrist", label: "Left Wrist", view: "front", cx: 30, cy: 45 },
+  { id: "right-wrist", label: "Right Wrist", view: "front", cx: 70, cy: 45 },
+  { id: "left-quadriceps", label: "Left Quadriceps", view: "front", cx: 37, cy: 42 },
+  { id: "right-quadriceps", label: "Right Quadriceps", view: "front", cx: 63, cy: 42 },
+  { id: "left-knee", label: "Left Knee", view: "front", cx: 42, cy: 78 },
+  { id: "right-knee", label: "Right Knee", view: "front", cx: 58, cy: 78 },
+  { id: "left-ankle", label: "Left Ankle", view: "front", cx: 42, cy: 92 },
+  { id: "right-ankle", label: "Right Ankle", view: "front", cx: 58, cy: 92 },
+  // Back
+  { id: "left-triceps", label: "Left Triceps", view: "back", cx: 35, cy: 25 },
+  { id: "right-triceps", label: "Right Triceps", view: "back", cx: 65, cy: 25 },
+  { id: "left-glute", label: "Left Glute", view: "back", cx: 38, cy: 49 },
+  { id: "right-glute", label: "Right Glute", view: "back", cx: 62, cy: 49 },
 ];
+
+export function sitesForView(view: "front" | "back"): BodySite[] {
+  if (view === "front") {
+    return bodySites.filter((s) => s.view === "front");
+  }
+  return [
+    ...bodySites.filter((s) => s.view === "back"),
+    ...bodySites.filter((s) => DUAL_VIEW_SITE_IDS.includes(s.id as (typeof DUAL_VIEW_SITE_IDS)[number])),
+  ];
+}

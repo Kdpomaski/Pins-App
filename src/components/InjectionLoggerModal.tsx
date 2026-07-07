@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check } from "lucide-react";
 import { usePinsStore } from "@/lib/store";
-import { bodySites } from "@/lib/body-map-data";
+import { bodySites, sitesForView } from "@/lib/body-map-data";
 
 type InjectionLoggerModalProps = {
   isOpen: boolean;
@@ -128,12 +128,12 @@ export function InjectionLoggerModal({ isOpen, onClose, defaultSiteId }: Injecti
                 >
                   <option value="" disabled>Select a site…</option>
                   <optgroup label="Front">
-                    {bodySites.filter((s) => s.view === "front").map((site) => (
+                    {sitesForView("front").map((site) => (
                       <option key={site.id} value={site.id}>{site.label}</option>
                     ))}
                   </optgroup>
                   <optgroup label="Back">
-                    {bodySites.filter((s) => s.view === "back").map((site) => (
+                    {sitesForView("back").map((site) => (
                       <option key={site.id} value={site.id}>{site.label}</option>
                     ))}
                   </optgroup>

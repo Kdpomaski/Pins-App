@@ -21,23 +21,33 @@ type Region = {
 
 const allRegions: Region[] = [
   // Front
-  { id: 'left-deltoid', label: 'Left Deltoid', view: 'front', x: 18, y: 21 },
-  { id: 'right-deltoid', label: 'Right Deltoid', view: 'front', x: 82, y: 21 },
-  { id: 'upper-left-abdomen', label: 'Upper Left Abdomen', view: 'front', x: 40, y: 31 },
-  { id: 'upper-right-abdomen', label: 'Upper Right Abdomen', view: 'front', x: 60, y: 31 },
-  { id: 'mid-left-abdomen', label: 'Mid Left Abdomen', view: 'front', x: 40, y: 37 },
-  { id: 'mid-right-abdomen', label: 'Mid Right Abdomen', view: 'front', x: 60, y: 37 },
-  { id: 'lower-left-abdomen', label: 'Lower Left Abdomen', view: 'front', x: 40, y: 43 },
-  { id: 'lower-right-abdomen', label: 'Lower Right Abdomen', view: 'front', x: 60, y: 43 },
-  { id: 'left-quadriceps', label: 'Left Quadriceps', view: 'front', x: 37, y: 62 },
-  { id: 'right-quadriceps', label: 'Right Quadriceps', view: 'front', x: 63, y: 62 },
+  { id: 'left-deltoid', label: 'Left Deltoid', view: 'front', x: 40, y: 21 },
+  { id: 'right-deltoid', label: 'Right Deltoid', view: 'front', x: 60, y: 21 },
+  { id: 'upper-left-abdomen', label: 'Upper Left Abdomen', view: 'front', x: 47, y: 33 },
+  { id: 'upper-right-abdomen', label: 'Upper Right Abdomen', view: 'front', x: 53, y: 33 },
+  { id: 'mid-left-abdomen', label: 'Mid Left Abdomen', view: 'front', x: 47, y: 39 },
+  { id: 'mid-right-abdomen', label: 'Mid Right Abdomen', view: 'front', x: 53, y: 39 },
+  { id: 'lower-left-abdomen', label: 'Lower Left Abdomen', view: 'front', x: 47, y: 45 },
+  { id: 'lower-right-abdomen', label: 'Lower Right Abdomen', view: 'front', x: 53, y: 45 },
+  { id: 'left-flank', label: 'Left Flank', view: 'front', x: 40, y: 45 },
+  { id: 'right-flank', label: 'Right Flank', view: 'front', x: 60, y: 45 },
+  { id: 'left-wrist', label: 'Left Wrist', view: 'front', x: 30, y: 45 },
+  { id: 'right-wrist', label: 'Right Wrist', view: 'front', x: 70, y: 45 },
+  { id: 'left-quadriceps', label: 'Left Quadriceps', view: 'front', x: 37, y: 42 },
+  { id: 'right-quadriceps', label: 'Right Quadriceps', view: 'front', x: 63, y: 42 },
+  { id: 'left-knee', label: 'Left Knee', view: 'front', x: 42, y: 78 },
+  { id: 'right-knee', label: 'Right Knee', view: 'front', x: 58, y: 78 },
+  { id: 'left-ankle', label: 'Left Ankle', view: 'front', x: 42, y: 92 },
+  { id: 'right-ankle', label: 'Right Ankle', view: 'front', x: 58, y: 92 },
   // Back
-  { id: 'left-triceps', label: 'Left Triceps', view: 'back', x: 20, y: 25 },
-  { id: 'right-triceps', label: 'Right Triceps', view: 'back', x: 80, y: 25 },
+  { id: 'left-triceps', label: 'Left Triceps', view: 'back', x: 35, y: 25 },
+  { id: 'right-triceps', label: 'Right Triceps', view: 'back', x: 65, y: 25 },
   { id: 'left-glute', label: 'Left Glute', view: 'back', x: 38, y: 49 },
   { id: 'right-glute', label: 'Right Glute', view: 'back', x: 62, y: 49 },
-  { id: 'left-hamstrings', label: 'Left Hamstrings', view: 'back', x: 38, y: 68 },
-  { id: 'right-hamstrings', label: 'Right Hamstrings', view: 'back', x: 62, y: 68 },
+  { id: 'left-knee', label: 'Left Knee', view: 'back', x: 42, y: 64 },
+  { id: 'right-knee', label: 'Right Knee', view: 'back', x: 58, y: 64 },
+  { id: 'left-ankle', label: 'Left Ankle', view: 'back', x: 42, y: 78 },
+  { id: 'right-ankle', label: 'Right Ankle', view: 'back', x: 58, y: 78 },
 ];
 
 const BodyMap: React.FC<{ onLogInjection?: (siteId: string) => void; logs?: InjectionLog[] }> = ({
@@ -86,7 +96,7 @@ const BodyMap: React.FC<{ onLogInjection?: (siteId: string) => void; logs?: Inje
 
             return (
               <button
-                key={r.id}
+                key={`${r.view}-${r.id}`}
                 type="button"
                 onClick={() => onLogInjection?.(r.id)}
                 aria-label={`Log injection at ${r.label}`}

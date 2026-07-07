@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
-      setStatus('unauthenticated');
+      setStatus(import.meta.env.DEV ? 'authenticated' : 'unauthenticated');
       return;
     }
 

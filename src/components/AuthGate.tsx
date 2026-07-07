@@ -23,8 +23,9 @@ function SupabaseSetupNotice() {
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { status, configured } = useAuth();
+  const devPreview = import.meta.env.DEV && !configured;
 
-  if (!configured) return <SupabaseSetupNotice />;
+  if (!configured && !devPreview) return <SupabaseSetupNotice />;
 
   if (status === 'loading') {
     return (
@@ -35,8 +36,17 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (status === 'unauthenticated') return <Auth />;
-  if (status === 'onboarding') return <Onboarding />;
+  if (!devPreview && status === 'unauthenticated') return <Auth />;
+  if (!devPreview && status === 'onboarding') return <Onboarding />;
 
-  return <>{children}</>;
+  return (
+    <>
+      {devPreview && (
+        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 text-xs text-center py-2 px-4">
+          Dev preview — Supabase auth skipped. Add <code className="font-mono">.env</code> for beta login.
+        </div>
+      )}
+      {children}
+    </>
+  );
 }
