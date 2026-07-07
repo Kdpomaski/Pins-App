@@ -1,6 +1,15 @@
 import type { AgeRange, Gender, UserProfile } from '@/lib/auth-types';
 import { supabase } from '@/lib/supabase';
 
+export function formatSupabaseError(err: unknown): string {
+  if (err && typeof err === 'object') {
+    const e = err as { message?: string; details?: string; hint?: string; code?: string };
+    const parts = [e.message, e.details, e.hint, e.code ? `(${e.code})` : ''].filter(Boolean);
+    if (parts.length > 0) return parts.join(' — ');
+  }
+  return 'Could not save profile.';
+}
+
 export async function fetchProfile(userId: string): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from('profiles')

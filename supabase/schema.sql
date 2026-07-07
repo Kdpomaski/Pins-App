@@ -1,4 +1,5 @@
--- Pins Beta: minimal anonymous profile (run in Supabase SQL editor)
+-- Pins Beta: minimal anonymous profile
+-- Run this entire file in Supabase → SQL Editor → Run
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -11,17 +12,28 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "Users can read own profile" on public.profiles;
+drop policy if exists "Users can insert own profile" on public.profiles;
+drop policy if exists "Users can update own profile" on public.profiles;
+
 create policy "Users can read own profile"
   on public.profiles
   for select
+  to authenticated
   using (auth.uid() = id);
 
 create policy "Users can insert own profile"
   on public.profiles
   for insert
+  to authenticated
   with check (auth.uid() = id);
 
 create policy "Users can update own profile"
   on public.profiles
   for update
-  using (auth.uid() = id);
+  to authenticated
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+grant select, insert, update on table public.profiles to authenticated;
+grant select on table public.profiles to service_role;

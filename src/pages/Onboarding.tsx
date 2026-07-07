@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TermsContent } from '@/components/TermsContent';
 import { useAuth } from '@/lib/auth-context';
 import { AGE_RANGES, GENDER_LABELS, GENDERS, type AgeRange, type Gender } from '@/lib/auth-types';
-import { upsertProfile } from '@/lib/profile';
+import { formatSupabaseError, upsertProfile } from '@/lib/profile';
 
 export default function Onboarding() {
   const { user, refreshProfile } = useAuth();
@@ -39,7 +39,7 @@ export default function Onboarding() {
       });
       await refreshProfile();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save profile.');
+      setError(formatSupabaseError(err));
     } finally {
       setLoading(false);
     }
