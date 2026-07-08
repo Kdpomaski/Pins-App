@@ -52,7 +52,7 @@ export default function Auth() {
       options: { emailRedirectTo: getAuthRedirectUrl() },
     });
     if (signUpError) setError(signUpError.message);
-    else setInfo('Check your email for confirmation, then sign in.');
+    else setInfo('Check your email — tap the link to confirm and you\'ll land in the app, signed in.');
     setLoading(false);
   };
 

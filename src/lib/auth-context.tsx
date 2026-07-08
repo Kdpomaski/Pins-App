@@ -10,6 +10,11 @@ import {
 import type { Session, User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/auth-types';
 import { fetchProfile, isProfileComplete } from '@/lib/profile';
+import {
+  clearAuthParamsFromUrl,
+  completeAuthFromUrl,
+  hasAuthCallbackParams,
+} from '@/lib/auth-callback';
 import { getAuthRedirectUrl, isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 type AuthStatus = 'loading' | 'unauthenticated' | 'onboarding' | 'authenticated';
@@ -67,6 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     (async () => {
+      const onCallbackRoute = window.location.pathname.endsWith('/auth/callback');
+      if (hasAuthCallbackParams() && !onCallbackRoute) {
+        await completeAuthFromUrl();
+        clearAuthParamsFromUrl();
+      }
+
       const { data } = await supabase.auth.getSession();
       if (cancelled) return;
       setSession(data.session);
