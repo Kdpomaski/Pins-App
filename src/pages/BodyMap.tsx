@@ -106,14 +106,17 @@ const BodyMap: React.FC<{
   return (
     <div className="min-h-screen bg-background text-foreground pb-24 pt-6 px-4">
       <Card className="p-4 sm:p-6 bg-card border border-border max-w-4xl mx-auto shadow-sm">
-        <div className="flex justify-between items-center mb-4 sm:mb-6">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Body Map</h2>
+        <div className="flex justify-between items-center mb-4 sm:mb-6 gap-3">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Body Map</h2>
+            <p className="text-sm text-muted-foreground mt-1">Tap a spot to log</p>
+          </div>
           <Button
             variant="outline"
-            className="border-border"
+            className="border-border text-base px-5 py-5 h-auto min-h-[48px]"
             onClick={() => setView(view === 'front' ? 'back' : 'front')}
           >
-            {view === 'front' ? 'Back View' : 'Front View'}
+            {view === 'front' ? 'Back' : 'Front'}
           </Button>
         </div>
 
@@ -127,7 +130,7 @@ const BodyMap: React.FC<{
               <button
                 type="button"
                 onClick={() => setSelectedCompound(null)}
-                className={`shrink-0 md:w-full text-left px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                className={`shrink-0 md:w-full text-left px-4 py-3 rounded-xl border text-base font-medium transition-colors min-h-[48px] ${
                   selectedCompound === null
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border bg-background text-muted-foreground hover:border-primary/50'
@@ -144,7 +147,7 @@ const BodyMap: React.FC<{
                     onClick={() =>
                       setSelectedCompound((prev) => (prev?.name === item.name ? null : item))
                     }
-                    className={`shrink-0 md:w-full text-left px-3 py-2 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
+                    className={`shrink-0 md:w-full text-left px-4 py-3 rounded-xl border text-base font-medium transition-colors flex items-center gap-2 min-h-[48px] ${
                       selectedCompound?.name === item.name
                         ? 'border-primary bg-primary/10 text-foreground'
                         : 'border-border bg-background text-muted-foreground hover:border-primary/50'
@@ -213,12 +216,14 @@ const BodyMap: React.FC<{
                     onClick={() => onLogInjection?.(r.id, selectedCompound?.name)}
                     aria-label={title}
                     title={title}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border focus:outline-none focus:ring-2 focus:ring-primary group"
+                    className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 focus:outline-none focus:ring-4 focus:ring-primary/50 group touch-manipulation"
                     style={{
                       left: `${r.x}%`,
                       top: `${r.y}%`,
-                      width: '3.8%',
-                      height: '3.8%',
+                      width: '6%',
+                      height: '6%',
+                      minWidth: '28px',
+                      minHeight: '28px',
                       backgroundColor: color,
                       borderColor: hasFilteredPin || !selectedCompound ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.25)',
                       boxShadow: hasFilteredPin ? '0 0 6px rgba(0,0,0,0.4)' : 'none',

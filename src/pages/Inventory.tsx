@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil } from "lucide-react";
+import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
 import { usePinsStore, InventoryItem } from "@/lib/store";
 import { motion, AnimatePresence } from "framer-motion";
@@ -69,7 +69,6 @@ export default function Inventory() {
       color: template.color,
       frequency: template.frequency,
       defaultDose: template.defaultDose,
-      reconstitutedAt: new Date().toISOString(),
     });
   };
 
@@ -212,6 +211,10 @@ function VialCard({
     setEditingDose(false);
   };
 
+  const handleReconstitute = () => {
+    updateInventory(item.id, { reconstitutedAt: new Date().toISOString() });
+  };
+
   return (
     <div className={`relative ${!isLast ? "border-b border-border" : ""}`}>
       <div className="p-5 relative">
@@ -253,9 +256,13 @@ function VialCard({
               <p className="text-xs text-muted-foreground mt-0.5">
                 {item.concentration} {item.unit}/ml
               </p>
-              {reconstitutedLabel && (
+              {reconstitutedLabel ? (
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Reconstituted {reconstitutedLabel}
+                </p>
+              ) : (
+                <p className="text-xs text-amber-700 font-medium mt-0.5">
+                  Not reconstituted yet
                 </p>
               )}
             </div>
@@ -280,6 +287,17 @@ function VialCard({
             </button>
           </div>
         </div>
+
+        {!item.reconstitutedAt && (
+          <button
+            type="button"
+            onClick={handleReconstitute}
+            className="relative z-10 w-full mb-4 flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl border-2 border-amber-500/60 bg-amber-50 text-amber-900 font-semibold text-base hover:bg-amber-100 active:scale-[0.98] transition-all"
+          >
+            <FlaskConical size={20} />
+            Mark as Reconstituted
+          </button>
+        )}
 
         <div className="space-y-2 relative z-10">
           <div className="flex justify-between text-sm">
@@ -422,9 +440,6 @@ function AddInventoryModal({
   const [color, setColor] = useState("#3b82f6");
   const [frequency, setFrequency] = useState("");
   const [defaultDose, setDefaultDose] = useState("");
-  const [reconstitutedAt, setReconstitutedAt] = useState(
-    () => new Date().toISOString().slice(0, 10),
-  );
   const [showFreqPicker, setShowFreqPicker] = useState(false);
   const [error, setError] = useState("");
 
@@ -449,10 +464,6 @@ function AddInventoryModal({
       return;
     }
 
-    const reconstitutedIso = reconstitutedAt
-      ? new Date(`${reconstitutedAt}T12:00:00`).toISOString()
-      : new Date().toISOString();
-
     const result = onAdd({
       name: name.trim(),
       concentration: conc,
@@ -462,7 +473,6 @@ function AddInventoryModal({
       color,
       frequency: frequency.trim() || undefined,
       defaultDose: doseVal,
-      reconstitutedAt: reconstitutedIso,
     });
 
     if (!result.ok) {
@@ -538,17 +548,9 @@ function AddInventoryModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Reconstituted Date
-            </label>
-            <input
-              type="date"
-              value={reconstitutedAt}
-              onChange={(e) => setReconstitutedAt(e.target.value)}
-              className="w-full bg-input/50 border border-border rounded-lg p-3 text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
-            />
-          </div>
+          <p className="text-sm text-muted-foreground bg-muted/40 border border-border rounded-xl px-4 py-3">
+            After adding, tap <span className="font-semibold text-foreground">Mark as Reconstituted</span> on the vial when you mix it.
+          </p>
 
           <div className="space-y-4 pt-2 border-t border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Protocol (optional)</p>

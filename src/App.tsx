@@ -49,10 +49,13 @@ function ProtectedRouter({
 }) {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/">
+        <BodyMapRoute handleOpenLogger={handleOpenLogger} />
+      </Route>
       <Route path="/body-map">
         <BodyMapRoute handleOpenLogger={handleOpenLogger} />
       </Route>
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/calendar" component={Calendar} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/calculator" component={Calculator} />
