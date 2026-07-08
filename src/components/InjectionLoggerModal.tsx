@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
+import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, MapPin } from "lucide-react";
+import { X, Check, MapPin, Clock } from "lucide-react";
 import { usePinsStore } from "@/lib/store";
 import { bodySites, siteLabel } from "@/lib/body-map-data";
 import type { InventoryItem } from "@/lib/store";
@@ -56,6 +57,20 @@ export function InjectionLoggerModal({
 
   const quickMode = Boolean(defaultSiteId);
   const selectedSite = bodySites.find((s) => s.id === siteId);
+
+  const lastInjectionLabel = useMemo(() => {
+    if (!siteId) return null;
+    const relevant = data.logs.filter((log) => {
+      if (log.siteId !== siteId) return false;
+      if (compound) return log.compound === compound;
+      return true;
+    });
+    if (relevant.length === 0) return null;
+    const latest = relevant.reduce((a, b) =>
+      new Date(b.timestamp).getTime() > new Date(a.timestamp).getTime() ? b : a,
+    );
+    return format(new Date(latest.timestamp), "MMM d, yyyy");
+  }, [siteId, compound, data.logs]);
 
   const applyCompound = (name: string) => {
     setCompound(name);
@@ -153,6 +168,12 @@ export function InjectionLoggerModal({
                       <MapPin size={22} className="text-primary shrink-0" />
                       <span className="truncate">{selectedSite.label}</span>
                     </h2>
+                    <p className="text-base text-muted-foreground mt-2 flex items-center gap-1.5">
+                      <Clock size={16} className="shrink-0" />
+                      {lastInjectionLabel
+                        ? `Last injection: ${lastInjectionLabel}`
+                        : "No prior injections here"}
+                    </p>
                   </>
                 ) : (
                   <h2 className="text-2xl font-bold text-foreground">Quick Log</h2>
