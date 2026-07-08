@@ -3,9 +3,12 @@
   "version": "1.0.1",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/verify-public.mjs && vite build && node scripts/verify-dist.mjs",
+    "build": "echo [build] step 1/3 verify public assets && node scripts/verify-public.mjs && echo [build] step 2/3 vite production build && vite build && echo [build] step 3/3 verify dist && node scripts/verify-dist.mjs && echo [build] SUCCESS",
     "preview": "vite preview"
   },
   "dependencies": {
