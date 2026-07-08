@@ -63,6 +63,14 @@ const BodyMap: React.FC<{
   const [view, setView] = useState<'front' | 'back'>('front');
   const [selectedCompound, setSelectedCompound] = useState<InventoryItem | null>(null);
 
+  const compoundTabs = useMemo(() => {
+    const seen = new Map<string, InventoryItem>();
+    for (const item of data.inventory) {
+      if (!seen.has(item.name)) seen.set(item.name, item);
+    }
+    return Array.from(seen.values());
+  }, [data.inventory]);
+
   const filteredLogs = useMemo(
     () =>
       selectedCompound
@@ -127,26 +135,32 @@ const BodyMap: React.FC<{
               >
                 All compounds
               </button>
-              {data.inventory.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() =>
-                    setSelectedCompound((prev) => (prev?.id === item.id ? null : item))
-                  }
-                  className={`shrink-0 md:w-full text-left px-3 py-2 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
-                    selectedCompound?.id === item.id
-                      ? 'border-primary bg-primary/10 text-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:border-primary/50'
-                  }`}
-                >
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="truncate">{item.name}</span>
-                </button>
-              ))}
+              {compoundTabs.map((item) => {
+                const vialCount = data.inventory.filter((v) => v.name === item.name).length;
+                return (
+                  <button
+                    key={item.name}
+                    type="button"
+                    onClick={() =>
+                      setSelectedCompound((prev) => (prev?.name === item.name ? null : item))
+                    }
+                    className={`shrink-0 md:w-full text-left px-3 py-2 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
+                      selectedCompound?.name === item.name
+                        ? 'border-primary bg-primary/10 text-foreground'
+                        : 'border-border bg-background text-muted-foreground hover:border-primary/50'
+                    }`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="truncate flex-1">{item.name}</span>
+                    {vialCount > 1 && (
+                      <span className="text-xs font-mono text-muted-foreground shrink-0">{vialCount}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
             {data.inventory.length === 0 && (
               <p className="text-xs text-muted-foreground mt-2">Add vials in Inventory to filter by compound.</p>

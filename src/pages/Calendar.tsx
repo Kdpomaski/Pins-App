@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Download } from "lucide-react";
 import { usePinsStore } from "@/lib/store";
+import { siteLabel } from "@/lib/body-map-data";
 import { ScheduleExportModal } from "@/components/ScheduleExportModal";
 
 export default function CalendarView() {
@@ -128,12 +129,15 @@ export default function CalendarView() {
                                     {dose.dose} {dose.unit}
                                   </span>
                                 </div>
-                                <div className="text-xs text-muted-foreground mt-0.5 flex gap-2">
+                                <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
                                   <span>{dose.time}</span>
                                   {log && (
-                                    <span className="text-primary">
-                                      • Logged at {format(new Date(log.timestamp), "HH:mm")}
-                                    </span>
+                                    <>
+                                      <span className="text-primary">
+                                        • Logged at {format(new Date(log.timestamp), "HH:mm")}
+                                      </span>
+                                      <span>• {siteLabel(log.siteId)}</span>
+                                    </>
                                   )}
                                 </div>
                               </div>
@@ -157,7 +161,7 @@ export default function CalendarView() {
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-0.5">
                                   {log.dose} {log.unit} • {format(new Date(log.timestamp), "HH:mm")} •{" "}
-                                  {log.siteId.replace(/-/g, " ")}
+                                  {siteLabel(log.siteId)}
                                 </div>
                               </div>
                             </div>

@@ -25,6 +25,7 @@ export const inventoryItemSchema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   frequency: z.string().trim().max(40).optional(),
   defaultDose: z.number().positive().finite().optional(),
+  reconstitutedAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
   deletedAt: z.string().datetime().nullable().optional(),
 });
@@ -65,6 +66,7 @@ export const newInventoryItemSchema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   frequency: z.string().trim().max(40).optional(),
   defaultDose: z.number().positive().finite().optional(),
+  reconstitutedAt: z.string().datetime().optional(),
 });
 
 export type NewInjectionLog = z.infer<typeof newInjectionLogSchema>;

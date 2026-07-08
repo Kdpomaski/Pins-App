@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check } from "lucide-react";
 import { usePinsStore } from "@/lib/store";
@@ -18,6 +18,15 @@ export function InjectionLoggerModal({
   defaultCompoundName,
 }: InjectionLoggerModalProps) {
   const { data, addLog } = usePinsStore();
+
+  const compoundOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return data.inventory.filter((item) => {
+      if (seen.has(item.name)) return false;
+      seen.add(item.name);
+      return true;
+    });
+  }, [data.inventory]);
 
   const [siteId,         setSiteId]         = useState(defaultSiteId ?? "");
   const [compound,       setCompound]       = useState("");
@@ -165,8 +174,8 @@ export function InjectionLoggerModal({
                   className="w-full bg-input/50 border border-border rounded-lg p-3 text-foreground focus:ring-1 focus:ring-primary focus:outline-none appearance-none"
                 >
                   <option value="" disabled>Select compound…</option>
-                  {data.inventory.map((item) => (
-                    <option key={item.id} value={item.name}>{item.name}</option>
+                  {compoundOptions.map((item) => (
+                    <option key={item.name} value={item.name}>{item.name}</option>
                   ))}
                   <option value="Custom">Custom / Other</option>
                 </select>

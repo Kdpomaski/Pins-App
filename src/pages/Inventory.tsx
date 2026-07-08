@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil } from "lucide-react";
+import { format } from "date-fns";
 import { usePinsStore, InventoryItem } from "@/lib/store";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,22 +14,63 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Preset frequency options
 const FREQ_OPTIONS = ["Daily", "2x/day", "Every other day", "3x/week", "2x/week", "Weekly", "Bi-weekly", "Monthly"];
+
+function groupInventoryByCompound(items: InventoryItem[]) {
+  const groups = new Map<string, InventoryItem[]>();
+  for (const item of items) {
+    const list = groups.get(item.name) ?? [];
+    list.push(item);
+    groups.set(item.name, list);
+  }
+  return Array.from(groups.entries());
+}
+
+function formatReconstitutedDate(iso?: string) {
+  if (!iso) return null;
+  try {
+    return format(new Date(iso), "MMM d, yyyy");
+  } catch {
+    return null;
+  }
+}
 
 export default function Inventory() {
   const { data, addInventoryItem, deleteInventoryItem } = usePinsStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<InventoryItem | null>(null);
 
+  const compoundGroups = useMemo(
+    () => groupInventoryByCompound(data.inventory),
+    [data.inventory],
+  );
+
   const pendingScheduleCount = pendingDelete
     ? data.schedule.filter((dose) => dose.compound === pendingDelete.name).length
     : 0;
+
+  const isLastVialOfCompound = pendingDelete
+    ? data.inventory.filter((v) => v.name === pendingDelete.name).length === 1
+    : false;
 
   const confirmDelete = () => {
     if (!pendingDelete) return;
     deleteInventoryItem(pendingDelete.id);
     setPendingDelete(null);
+  };
+
+  const handleAddVialToCompound = (template: InventoryItem) => {
+    addInventoryItem({
+      name: template.name,
+      concentration: template.concentration,
+      totalVolume: template.totalVolume,
+      remainingVolume: template.totalVolume,
+      unit: template.unit,
+      color: template.color,
+      frequency: template.frequency,
+      defaultDose: template.defaultDose,
+      reconstitutedAt: new Date().toISOString(),
+    });
   };
 
   return (
@@ -55,11 +97,12 @@ export default function Inventory() {
               </button>
             </div>
           ) : (
-            data.inventory.map((item) => (
-              <InventoryCard
-                key={item.id}
-                item={item}
-                onDelete={() => setPendingDelete(item)}
+            compoundGroups.map(([name, vials]) => (
+              <CompoundGroupCard
+                key={name}
+                vials={vials}
+                onAddVial={() => handleAddVialToCompound(vials[0])}
+                onDeleteVial={setPendingDelete}
               />
             ))
           )}
@@ -75,10 +118,12 @@ export default function Inventory() {
       <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {pendingDelete?.name}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Delete {pendingDelete?.name} vial?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the vial from your inventory
-              {pendingScheduleCount > 0
+              This removes this vial from your inventory
+              {isLastVialOfCompound && pendingScheduleCount > 0
                 ? ` and deletes ${pendingScheduleCount} scheduled dose${pendingScheduleCount === 1 ? "" : "s"} for this compound.`
                 : "."}
               {" "}Past injection logs are kept.
@@ -99,17 +144,62 @@ export default function Inventory() {
   );
 }
 
-// ── Inventory Card with inline protocol editing ───────────────────────────────
-function InventoryCard({ item, onDelete }: { item: InventoryItem; onDelete: () => void }) {
+function CompoundGroupCard({
+  vials,
+  onAddVial,
+  onDeleteVial,
+}: {
+  vials: InventoryItem[];
+  onAddVial: () => void;
+  onDeleteVial: (item: InventoryItem) => void;
+}) {
+  const count = vials.length;
+
+  return (
+    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      {vials.map((item, index) => (
+        <VialCard
+          key={item.id}
+          item={item}
+          showCompoundHeader={index === 0}
+          vialIndex={index + 1}
+          compoundCount={count}
+          onAddVial={onAddVial}
+          onDelete={() => onDeleteVial(item)}
+          isLast={index === vials.length - 1}
+        />
+      ))}
+    </div>
+  );
+}
+
+function VialCard({
+  item,
+  showCompoundHeader,
+  vialIndex,
+  compoundCount,
+  onAddVial,
+  onDelete,
+  isLast,
+}: {
+  item: InventoryItem;
+  showCompoundHeader: boolean;
+  vialIndex: number;
+  compoundCount: number;
+  onAddVial: () => void;
+  onDelete: () => void;
+  isLast: boolean;
+}) {
   const { updateInventory } = usePinsStore();
   const [expanded, setExpanded] = useState(false);
   const [editingFreq, setEditingFreq] = useState(false);
   const [editingDose, setEditingDose] = useState(false);
-  const [freqDraft, setFreqDraft]     = useState(item.frequency ?? "");
-  const [doseDraft, setDoseDraft]     = useState(item.defaultDose != null ? String(item.defaultDose) : "");
+  const [freqDraft, setFreqDraft] = useState(item.frequency ?? "");
+  const [doseDraft, setDoseDraft] = useState(item.defaultDose != null ? String(item.defaultDose) : "");
 
   const percent = Math.max(0, Math.min(100, (item.remainingVolume / item.totalVolume) * 100));
-  const isLow   = percent < 20;
+  const isLow = percent < 20;
+  const reconstitutedLabel = formatReconstitutedDate(item.reconstitutedAt);
 
   const saveFreq = () => {
     updateInventory(item.id, { frequency: freqDraft.trim() || undefined });
@@ -123,8 +213,7 @@ function InventoryCard({ item, onDelete }: { item: InventoryItem; onDelete: () =
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden group">
-      {/* Main row */}
+    <div className={`relative ${!isLast ? "border-b border-border" : ""}`}>
       <div className="p-5 relative">
         <div
           className="absolute top-0 right-0 w-32 h-32 rounded-full blur-[50px] opacity-10 pointer-events-none"
@@ -132,17 +221,46 @@ function InventoryCard({ item, onDelete }: { item: InventoryItem; onDelete: () =
         />
 
         <div className="flex justify-between items-start mb-4 relative z-10">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-4 h-4 rounded-full border-2 border-background shadow-sm"
-              style={{ backgroundColor: item.color, boxShadow: `0 0 10px ${item.color}80` }}
-            />
-            <div>
-              <h3 className="font-semibold text-lg">{item.name}</h3>
-              <p className="text-xs text-muted-foreground">{item.concentration} {item.unit}/ml</p>
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            {showCompoundHeader ? (
+              <div
+                className="w-4 h-4 rounded-full border-2 border-background shadow-sm shrink-0 mt-1"
+                style={{ backgroundColor: item.color, boxShadow: `0 0 10px ${item.color}80` }}
+              />
+            ) : (
+              <div className="w-4 shrink-0" />
+            )}
+            <div className="min-w-0 flex-1">
+              {showCompoundHeader ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-semibold text-lg">{item.name}</h3>
+                  <span className="text-sm font-mono text-muted-foreground bg-background/60 border border-border rounded-full px-2.5 py-0.5">
+                    {compoundCount}
+                  </span>
+                  <button
+                    onClick={onAddVial}
+                    className="w-7 h-7 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary/20 transition-colors shrink-0"
+                    aria-label={`Add another ${item.name} vial`}
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Vial {vialIndex}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {item.concentration} {item.unit}/ml
+              </p>
+              {reconstitutedLabel && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Reconstituted {reconstitutedLabel}
+                </p>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setExpanded((v) => !v)}
               className="text-muted-foreground hover:text-primary transition-colors p-1"
@@ -155,14 +273,14 @@ function InventoryCard({ item, onDelete }: { item: InventoryItem; onDelete: () =
             </button>
             <button
               onClick={onDelete}
-              className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 p-1"
+              className="text-foreground hover:text-destructive transition-colors p-1"
+              aria-label="Delete vial"
             >
-              <X size={16} />
+              <X size={16} strokeWidth={2.5} />
             </button>
           </div>
         </div>
 
-        {/* Volume bar */}
         <div className="space-y-2 relative z-10">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Volume</span>
@@ -178,7 +296,6 @@ function InventoryCard({ item, onDelete }: { item: InventoryItem; onDelete: () =
           </div>
         </div>
 
-        {/* Protocol summary (collapsed) */}
         {!expanded && (item.frequency || item.defaultDose != null) && (
           <div className="mt-3 flex gap-3 relative z-10">
             {item.frequency && (
@@ -195,7 +312,6 @@ function InventoryCard({ item, onDelete }: { item: InventoryItem; onDelete: () =
         )}
       </div>
 
-      {/* Expandable protocol editor */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -208,7 +324,6 @@ function InventoryCard({ item, onDelete }: { item: InventoryItem; onDelete: () =
             <div className="px-5 py-4 space-y-4 bg-background/40">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Protocol</p>
 
-              {/* Frequency */}
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="text-sm text-muted-foreground">Frequency</label>
@@ -229,7 +344,6 @@ function InventoryCard({ item, onDelete }: { item: InventoryItem; onDelete: () =
                       className="w-full bg-input/50 border border-border rounded-lg p-2.5 text-sm text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
                       onKeyDown={(e) => e.key === "Enter" && saveFreq()}
                     />
-                    {/* Quick-pick chips */}
                     <div className="flex flex-wrap gap-1.5">
                       {FREQ_OPTIONS.map((f) => (
                         <button
@@ -252,7 +366,6 @@ function InventoryCard({ item, onDelete }: { item: InventoryItem; onDelete: () =
                 )}
               </div>
 
-              {/* Default dose */}
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="text-sm text-muted-foreground">Default Dose</label>
@@ -295,7 +408,6 @@ function InventoryCard({ item, onDelete }: { item: InventoryItem; onDelete: () =
   );
 }
 
-// ── Add Vial Modal ────────────────────────────────────────────────────────────
 function AddInventoryModal({
   onClose,
   onAdd,
@@ -303,15 +415,18 @@ function AddInventoryModal({
   onClose: () => void;
   onAdd: (item: Omit<InventoryItem, "id" | "updatedAt">) => { ok: true } | { ok: false; error: string };
 }) {
-  const [name, setName]               = useState("");
+  const [name, setName] = useState("");
   const [concentration, setConcentration] = useState("");
   const [totalVolume, setTotalVolume] = useState("");
-  const [unit, setUnit]               = useState<"mg" | "mcg">("mg");
-  const [color, setColor]             = useState("#3b82f6");
-  const [frequency, setFrequency]     = useState("");
+  const [unit, setUnit] = useState<"mg" | "mcg">("mg");
+  const [color, setColor] = useState("#3b82f6");
+  const [frequency, setFrequency] = useState("");
   const [defaultDose, setDefaultDose] = useState("");
+  const [reconstitutedAt, setReconstitutedAt] = useState(
+    () => new Date().toISOString().slice(0, 10),
+  );
   const [showFreqPicker, setShowFreqPicker] = useState(false);
-  const [error, setError]             = useState("");
+  const [error, setError] = useState("");
 
   const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
 
@@ -334,6 +449,10 @@ function AddInventoryModal({
       return;
     }
 
+    const reconstitutedIso = reconstitutedAt
+      ? new Date(`${reconstitutedAt}T12:00:00`).toISOString()
+      : new Date().toISOString();
+
     const result = onAdd({
       name: name.trim(),
       concentration: conc,
@@ -343,6 +462,7 @@ function AddInventoryModal({
       color,
       frequency: frequency.trim() || undefined,
       defaultDose: doseVal,
+      reconstitutedAt: reconstitutedIso,
     });
 
     if (!result.ok) {
@@ -373,7 +493,6 @@ function AddInventoryModal({
         </div>
 
         <div className="space-y-5">
-          {/* Name */}
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Compound Name</label>
             <input
@@ -385,7 +504,6 @@ function AddInventoryModal({
             />
           </div>
 
-          {/* Concentration + Volume */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
@@ -420,11 +538,21 @@ function AddInventoryModal({
             </div>
           </div>
 
-          {/* Protocol section */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Reconstituted Date
+            </label>
+            <input
+              type="date"
+              value={reconstitutedAt}
+              onChange={(e) => setReconstitutedAt(e.target.value)}
+              className="w-full bg-input/50 border border-border rounded-lg p-3 text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+            />
+          </div>
+
           <div className="space-y-4 pt-2 border-t border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Protocol (optional)</p>
 
-            {/* Frequency */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Frequency</label>
               <div className="relative">
@@ -460,7 +588,6 @@ function AddInventoryModal({
               </div>
             </div>
 
-            {/* Default dose */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Default Dose per Injection
@@ -477,7 +604,6 @@ function AddInventoryModal({
             </div>
           </div>
 
-          {/* Color picker */}
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Marker Color</label>
             <div className="flex flex-wrap gap-3 p-2 bg-input/30 rounded-xl border border-border">

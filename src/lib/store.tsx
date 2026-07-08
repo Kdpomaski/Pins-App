@@ -41,6 +41,7 @@ export type InventoryItem = {
   color: string;
   frequency?: string;
   defaultDose?: number;
+  reconstitutedAt?: string;
   updatedAt?: string;
   deletedAt?: string | null;
 };
@@ -137,19 +138,28 @@ export function PinsProvider({ children }: { children: ReactNode }) {
     const newLog: InjectionLog = { ...parsed.data, id: crypto.randomUUID(), updatedAt: now };
 
     setData((prev) => {
+      let deducted = false;
       const inventory = prev.inventory.map((item) => {
-        if (item.name === newLog.compound) {
-          let doseInVialUnits = newLog.dose;
-          if (item.unit === 'mg' && newLog.unit === 'mcg') doseInVialUnits = newLog.dose / 1000;
-          if (item.unit === 'mcg' && newLog.unit === 'mg') doseInVialUnits = newLog.dose * 1000;
-          const volumeUsed = doseInVialUnits / item.concentration;
-          return {
-            ...item,
-            remainingVolume: Math.max(0, item.remainingVolume - volumeUsed),
-            updatedAt: now,
-          };
+        if (item.name !== newLog.compound || deducted) return item;
+
+        let doseInVialUnits = newLog.dose;
+        if (item.unit === 'mg' && newLog.unit === 'mcg') doseInVialUnits = newLog.dose / 1000;
+        if (item.unit === 'mcg' && newLog.unit === 'mg') doseInVialUnits = newLog.dose * 1000;
+        const volumeUsed = doseInVialUnits / item.concentration;
+
+        if (item.remainingVolume <= 0 && !deducted) {
+          const hasActiveVial = prev.inventory.some(
+            (v) => v.name === newLog.compound && v.remainingVolume > 0,
+          );
+          if (hasActiveVial) return item;
         }
-        return item;
+
+        deducted = true;
+        return {
+          ...item,
+          remainingVolume: Math.max(0, item.remainingVolume - volumeUsed),
+          updatedAt: now,
+        };
       });
 
       return {
@@ -192,10 +202,17 @@ export function PinsProvider({ children }: { children: ReactNode }) {
       const item = prev.inventory.find((entry) => entry.id === id);
       if (!item) return prev;
 
+      const remainingVials = prev.inventory.filter(
+        (entry) => entry.name === item.name && entry.id !== id,
+      );
+
       return {
         ...prev,
         inventory: prev.inventory.filter((entry) => entry.id !== id),
-        schedule: prev.schedule.filter((dose) => dose.compound !== item.name),
+        schedule:
+          remainingVials.length === 0
+            ? prev.schedule.filter((dose) => dose.compound !== item.name)
+            : prev.schedule,
       };
     });
   };

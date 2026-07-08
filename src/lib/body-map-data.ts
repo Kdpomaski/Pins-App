@@ -36,6 +36,10 @@ export const bodySites: BodySite[] = [
   { id: "right-glute", label: "Right Glute", view: "back", cx: 57, cy: 46 },
 ];
 
+export function siteLabel(siteId: string): string {
+  return bodySites.find((s) => s.id === siteId)?.label ?? siteId.replace(/-/g, " ");
+}
+
 export function sitesForView(view: "front" | "back"): BodySite[] {
   if (view === "front") {
     return bodySites.filter((s) => s.view === "front");
