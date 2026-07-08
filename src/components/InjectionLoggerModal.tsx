@@ -8,9 +8,15 @@ type InjectionLoggerModalProps = {
   isOpen: boolean;
   onClose: () => void;
   defaultSiteId?: string | null;
+  defaultCompoundName?: string | null;
 };
 
-export function InjectionLoggerModal({ isOpen, onClose, defaultSiteId }: InjectionLoggerModalProps) {
+export function InjectionLoggerModal({
+  isOpen,
+  onClose,
+  defaultSiteId,
+  defaultCompoundName,
+}: InjectionLoggerModalProps) {
   const { data, addLog } = usePinsStore();
 
   const [siteId,         setSiteId]         = useState(defaultSiteId ?? "");
@@ -21,6 +27,14 @@ export function InjectionLoggerModal({ isOpen, onClose, defaultSiteId }: Injecti
   const [notes,          setNotes]          = useState("");
   const [error,          setError]          = useState("");
 
+  const prefillFromInventoryName = (name: string) => {
+    const item = data.inventory.find((i) => i.name === name);
+    if (!item) return;
+    setCompound(item.name);
+    setUnit(item.unit);
+    if (item.defaultDose != null) setDose(String(item.defaultDose));
+  };
+
   // Reset & pre-fill each time the modal opens
   useEffect(() => {
     if (!isOpen) return;
@@ -30,14 +44,13 @@ export function InjectionLoggerModal({ isOpen, onClose, defaultSiteId }: Injecti
     setDose("");
     setNotes("");
     setError("");
-    // Auto-select + pre-fill dose when there's exactly one inventory item
-    if (data.inventory.length === 1) {
-      const item = data.inventory[0];
-      setCompound(item.name);
-      setUnit(item.unit);
-      if (item.defaultDose != null) setDose(String(item.defaultDose));
+
+    if (defaultCompoundName) {
+      prefillFromInventoryName(defaultCompoundName);
+    } else if (data.inventory.length === 1) {
+      prefillFromInventoryName(data.inventory[0].name);
     }
-  }, [isOpen, defaultSiteId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, defaultSiteId, defaultCompoundName, data.inventory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCompoundChange = (name: string) => {
     setCompound(name);

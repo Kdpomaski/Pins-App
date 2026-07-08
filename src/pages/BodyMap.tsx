@@ -52,7 +52,10 @@ const allRegions: Region[] = [
 
 const NEUTRAL_PIN = 'rgba(255, 255, 255, 0.12)';
 
-const BodyMap: React.FC<{ onLogInjection?: (siteId: string) => void; logs?: InjectionLog[] }> = ({
+const BodyMap: React.FC<{
+  onLogInjection?: (siteId: string, compoundName?: string) => void;
+  logs?: InjectionLog[];
+}> = ({
   onLogInjection,
   logs = [],
 }) => {
@@ -193,7 +196,7 @@ const BodyMap: React.FC<{ onLogInjection?: (siteId: string) => void; logs?: Inje
                   <button
                     key={`${r.view}-${r.id}`}
                     type="button"
-                    onClick={() => onLogInjection?.(r.id)}
+                    onClick={() => onLogInjection?.(r.id, selectedCompound?.name)}
                     aria-label={title}
                     title={title}
                     className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border focus:outline-none focus:ring-2 focus:ring-primary group"

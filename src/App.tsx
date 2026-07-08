@@ -19,7 +19,11 @@ import { AuthProvider } from '@/lib/auth-context';
 import { PinsProvider, usePinsStore } from '@/lib/store';
 import { SecurityProvider } from '@/lib/security-context';
 
-function BodyMapRoute({ handleOpenLogger }: { handleOpenLogger: (siteId?: string) => void }) {
+function BodyMapRoute({
+  handleOpenLogger,
+}: {
+  handleOpenLogger: (siteId?: string, compoundName?: string) => void;
+}) {
   const { data } = usePinsStore();
   const logs = data.logs.map((log) => ({
     id: log.id,
@@ -30,10 +34,19 @@ function BodyMapRoute({ handleOpenLogger }: { handleOpenLogger: (siteId?: string
     time: log.timestamp,
   }));
 
-  return <BodyMap onLogInjection={(siteId) => handleOpenLogger(siteId)} logs={logs} />;
+  return (
+    <BodyMap
+      onLogInjection={(siteId, compoundName) => handleOpenLogger(siteId, compoundName)}
+      logs={logs}
+    />
+  );
 }
 
-function ProtectedRouter({ handleOpenLogger }: { handleOpenLogger: (siteId?: string) => void }) {
+function ProtectedRouter({
+  handleOpenLogger,
+}: {
+  handleOpenLogger: (siteId?: string, compoundName?: string) => void;
+}) {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
@@ -51,9 +64,11 @@ function ProtectedRouter({ handleOpenLogger }: { handleOpenLogger: (siteId?: str
 function AppShell() {
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [modalSiteId, setModalSiteId] = useState<string | null>(null);
+  const [modalCompoundName, setModalCompoundName] = useState<string | null>(null);
 
-  const handleOpenLogger = (siteId?: string) => {
+  const handleOpenLogger = (siteId?: string, compoundName?: string) => {
     setModalSiteId(siteId ?? null);
+    setModalCompoundName(compoundName ?? null);
     setIsLogModalOpen(true);
   };
 
@@ -65,6 +80,7 @@ function AppShell() {
         isOpen={isLogModalOpen}
         onClose={() => setIsLogModalOpen(false)}
         defaultSiteId={modalSiteId}
+        defaultCompoundName={modalCompoundName}
       />
     </div>
   );
