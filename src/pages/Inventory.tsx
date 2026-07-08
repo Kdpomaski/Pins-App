@@ -152,22 +152,50 @@ function CompoundGroupCard({
   onAddVial: () => void;
   onDeleteVial: (item: InventoryItem) => void;
 }) {
+  const [extraVialsExpanded, setExtraVialsExpanded] = useState(false);
   const count = vials.length;
+  const [primary, ...extraVials] = vials;
 
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      {vials.map((item, index) => (
-        <VialCard
-          key={item.id}
-          item={item}
-          showCompoundHeader={index === 0}
-          vialIndex={index + 1}
-          compoundCount={count}
-          onAddVial={onAddVial}
-          onDelete={() => onDeleteVial(item)}
-          isLast={index === vials.length - 1}
-        />
-      ))}
+      <VialCard
+        key={primary.id}
+        item={primary}
+        showCompoundHeader
+        vialIndex={1}
+        compoundCount={count}
+        onAddVial={onAddVial}
+        onDelete={() => onDeleteVial(primary)}
+        isLast={count === 1 || !extraVialsExpanded}
+        chevronExpandsExtraVials={count > 1}
+        extraVialsExpanded={extraVialsExpanded}
+        onToggleExtraVials={() => setExtraVialsExpanded((v) => !v)}
+      />
+
+      <AnimatePresence initial={false}>
+        {extraVialsExpanded &&
+          extraVials.map((item, index) => (
+            <motion.div
+              key={item.id}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden border-t border-border"
+            >
+              <VialCard
+                item={item}
+                showCompoundHeader={false}
+                vialIndex={index + 2}
+                compoundCount={count}
+                onAddVial={onAddVial}
+                onDelete={() => onDeleteVial(item)}
+                isLast={index === extraVials.length - 1}
+                isAdditionalVial
+              />
+            </motion.div>
+          ))}
+      </AnimatePresence>
     </div>
   );
 }
@@ -180,6 +208,10 @@ function VialCard({
   onAddVial,
   onDelete,
   isLast,
+  isAdditionalVial = false,
+  chevronExpandsExtraVials = false,
+  extraVialsExpanded = false,
+  onToggleExtraVials,
 }: {
   item: InventoryItem;
   showCompoundHeader: boolean;
@@ -188,9 +220,13 @@ function VialCard({
   onAddVial: () => void;
   onDelete: () => void;
   isLast: boolean;
+  isAdditionalVial?: boolean;
+  chevronExpandsExtraVials?: boolean;
+  extraVialsExpanded?: boolean;
+  onToggleExtraVials?: () => void;
 }) {
   const { updateInventory } = usePinsStore();
-  const [expanded, setExpanded] = useState(false);
+  const [protocolExpanded, setProtocolExpanded] = useState(false);
   const [editingFreq, setEditingFreq] = useState(false);
   const [editingDose, setEditingDose] = useState(false);
   const [freqDraft, setFreqDraft] = useState(item.frequency ?? "");
@@ -214,6 +250,17 @@ function VialCard({
   const handleReconstitute = () => {
     updateInventory(item.id, { reconstitutedAt: new Date().toISOString() });
   };
+
+  const handleChevronClick = () => {
+    if (chevronExpandsExtraVials && onToggleExtraVials) {
+      onToggleExtraVials();
+    } else {
+      setProtocolExpanded((v) => !v);
+    }
+  };
+
+  const chevronOpen = chevronExpandsExtraVials ? extraVialsExpanded : protocolExpanded;
+  const showReconstituteButton = isAdditionalVial && !item.reconstitutedAt;
 
   return (
     <div className={`relative ${!isLast ? "border-b border-border" : ""}`}>
@@ -256,26 +303,40 @@ function VialCard({
               <p className="text-xs text-muted-foreground mt-0.5">
                 {item.concentration} {item.unit}/ml
               </p>
-              {reconstitutedLabel ? (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Reconstituted {reconstitutedLabel}
-                </p>
+              {isAdditionalVial ? (
+                reconstitutedLabel ? (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Reconstituted {reconstitutedLabel}
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-700 font-medium mt-0.5">
+                    Not reconstituted yet
+                  </p>
+                )
               ) : (
-                <p className="text-xs text-amber-700 font-medium mt-0.5">
-                  Not reconstituted yet
-                </p>
+                reconstitutedLabel && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Reconstituted {reconstitutedLabel}
+                  </p>
+                )
               )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => setExpanded((v) => !v)}
+              onClick={handleChevronClick}
               className="text-muted-foreground hover:text-primary transition-colors p-1"
-              aria-label="Edit protocol"
+              aria-label={
+                chevronExpandsExtraVials
+                  ? extraVialsExpanded
+                    ? "Hide additional vials"
+                    : `Show ${compoundCount - 1} more vial${compoundCount - 1 === 1 ? "" : "s"}`
+                  : "Edit protocol"
+              }
             >
               <ChevronDown
                 size={16}
-                className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                className={`transition-transform duration-200 ${chevronOpen ? "rotate-180" : ""}`}
               />
             </button>
             <button
@@ -288,13 +349,13 @@ function VialCard({
           </div>
         </div>
 
-        {!item.reconstitutedAt && (
+        {showReconstituteButton && (
           <button
             type="button"
             onClick={handleReconstitute}
-            className="relative z-10 w-full mb-4 flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl border-2 border-amber-500/60 bg-amber-50 text-amber-900 font-semibold text-base hover:bg-amber-100 active:scale-[0.98] transition-all"
+            className="relative z-10 w-full mb-3 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg border-2 border-amber-500/60 bg-amber-50 text-amber-900 font-semibold text-sm hover:bg-amber-100 active:scale-[0.98] transition-all"
           >
-            <FlaskConical size={20} />
+            <FlaskConical size={16} />
             Mark as Reconstituted
           </button>
         )}
@@ -314,8 +375,8 @@ function VialCard({
           </div>
         </div>
 
-        {!expanded && (item.frequency || item.defaultDose != null) && (
-          <div className="mt-3 flex gap-3 relative z-10">
+        {!protocolExpanded && (item.frequency || item.defaultDose != null) && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 relative z-10">
             {item.frequency && (
               <span className="text-xs text-muted-foreground bg-background/60 border border-border rounded-full px-3 py-1">
                 {item.frequency}
@@ -328,10 +389,30 @@ function VialCard({
             )}
           </div>
         )}
+
+        {chevronExpandsExtraVials && !extraVialsExpanded && compoundCount > 1 && (
+          <button
+            type="button"
+            onClick={onToggleExtraVials}
+            className="mt-3 text-sm text-primary font-medium relative z-10"
+          >
+            +{compoundCount - 1} more vial{compoundCount - 1 === 1 ? "" : "s"} — tap arrow to expand
+          </button>
+        )}
+
+        {chevronExpandsExtraVials && (
+          <button
+            type="button"
+            onClick={() => setProtocolExpanded((v) => !v)}
+            className="mt-3 text-sm text-muted-foreground hover:text-primary font-medium relative z-10"
+          >
+            {protocolExpanded ? "Hide protocol" : "Edit protocol"}
+          </button>
+        )}
       </div>
 
       <AnimatePresence>
-        {expanded && (
+        {protocolExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -433,6 +514,7 @@ function AddInventoryModal({
   onClose: () => void;
   onAdd: (item: Omit<InventoryItem, "id" | "updatedAt">) => { ok: true } | { ok: false; error: string };
 }) {
+  const { data } = usePinsStore();
   const [name, setName] = useState("");
   const [concentration, setConcentration] = useState("");
   const [totalVolume, setTotalVolume] = useState("");
@@ -464,8 +546,13 @@ function AddInventoryModal({
       return;
     }
 
+    const trimmedName = name.trim();
+    const isNewCompound = !data.inventory.some(
+      (v) => v.name.toLowerCase() === trimmedName.toLowerCase(),
+    );
+
     const result = onAdd({
-      name: name.trim(),
+      name: trimmedName,
       concentration: conc,
       totalVolume: vol,
       remainingVolume: vol,
@@ -473,6 +560,7 @@ function AddInventoryModal({
       color,
       frequency: frequency.trim() || undefined,
       defaultDose: doseVal,
+      reconstitutedAt: isNewCompound ? new Date().toISOString() : undefined,
     });
 
     if (!result.ok) {
@@ -549,7 +637,7 @@ function AddInventoryModal({
           </div>
 
           <p className="text-sm text-muted-foreground bg-muted/40 border border-border rounded-xl px-4 py-3">
-            After adding, tap <span className="font-semibold text-foreground">Mark as Reconstituted</span> on the vial when you mix it.
+            New compounds are marked reconstituted when added. Extra vials (via <span className="font-semibold text-foreground">+</span>) stay unreconstituted until you tap <span className="font-semibold text-foreground">Mark as Reconstituted</span>.
           </p>
 
           <div className="space-y-4 pt-2 border-t border-border">
