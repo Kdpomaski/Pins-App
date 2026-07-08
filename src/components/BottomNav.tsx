@@ -13,7 +13,7 @@ export function BottomNav({ onOpenLogModal }: { onOpenLogModal: () => void }) {
 
   const rightLinks = [
     { href: "/calendar", icon: Calendar, label: "Schedule" },
-    { href: "/inventory", icon: Package, label: "Vials" },
+    { href: "/inventory", icon: Package, label: "Inventory" },
   ];
 
   const renderLink = (link: { href: string; icon: ElementType; label: string }) => {
