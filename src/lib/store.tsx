@@ -18,6 +18,10 @@ import {
 import { useSecurity } from '@/lib/security-context';
 import { buildSyncEnvelope } from '@/lib/sync';
 import { bootstrapPinsData, saveEncrypted, saveWithDeviceKey } from '@/lib/storage';
+import {
+  deductVolumeFromCompound,
+  scheduleForRemainingInventory,
+} from '@/lib/inventory-vials';
 
 export type InjectionLog = {
   id: string;
@@ -138,29 +142,13 @@ export function PinsProvider({ children }: { children: ReactNode }) {
     const newLog: InjectionLog = { ...parsed.data, id: crypto.randomUUID(), updatedAt: now };
 
     setData((prev) => {
-      let deducted = false;
-      const inventory = prev.inventory.map((item) => {
-        if (item.name !== newLog.compound || deducted) return item;
-
-        let doseInVialUnits = newLog.dose;
-        if (item.unit === 'mg' && newLog.unit === 'mcg') doseInVialUnits = newLog.dose / 1000;
-        if (item.unit === 'mcg' && newLog.unit === 'mg') doseInVialUnits = newLog.dose * 1000;
-        const volumeUsed = doseInVialUnits / item.concentration;
-
-        if (item.remainingVolume <= 0 && !deducted) {
-          const hasActiveVial = prev.inventory.some(
-            (v) => v.name === newLog.compound && v.remainingVolume > 0,
-          );
-          if (hasActiveVial) return item;
-        }
-
-        deducted = true;
-        return {
-          ...item,
-          remainingVolume: Math.max(0, item.remainingVolume - volumeUsed),
-          updatedAt: now,
-        };
-      });
+      const inventory = deductVolumeFromCompound(
+        prev.inventory,
+        newLog.compound,
+        newLog.dose,
+        newLog.unit,
+        now,
+      );
 
       return {
         ...prev,
@@ -168,6 +156,7 @@ export function PinsProvider({ children }: { children: ReactNode }) {
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         ),
         inventory,
+        schedule: scheduleForRemainingInventory(prev.schedule, inventory),
       };
     });
 

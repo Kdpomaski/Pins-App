@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
 import { usePinsStore, InventoryItem } from "@/lib/store";
+import { sortVialsForCompound } from "@/lib/inventory-vials";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertDialog,
@@ -23,7 +24,9 @@ function groupInventoryByCompound(items: InventoryItem[]) {
     list.push(item);
     groups.set(item.name, list);
   }
-  return Array.from(groups.entries());
+  return Array.from(groups.entries()).map(
+    ([name, vials]) => [name, sortVialsForCompound(vials)] as const,
+  );
 }
 
 function formatReconstitutedDate(iso?: string) {
@@ -260,7 +263,7 @@ function VialCard({
   };
 
   const chevronOpen = chevronExpandsExtraVials ? extraVialsExpanded : protocolExpanded;
-  const showReconstituteButton = isAdditionalVial && !item.reconstitutedAt;
+  const showReconstituteButton = !item.reconstitutedAt;
 
   return (
     <div className={`relative ${!isLast ? "border-b border-border" : ""}`}>
@@ -303,22 +306,14 @@ function VialCard({
               <p className="text-xs text-muted-foreground mt-0.5">
                 {item.concentration} {item.unit}/ml
               </p>
-              {isAdditionalVial ? (
-                reconstitutedLabel ? (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Reconstituted {reconstitutedLabel}
-                  </p>
-                ) : (
-                  <p className="text-xs text-amber-700 font-medium mt-0.5">
-                    Not reconstituted yet
-                  </p>
-                )
+              {reconstitutedLabel ? (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Reconstituted {reconstitutedLabel}
+                </p>
               ) : (
-                reconstitutedLabel && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Reconstituted {reconstitutedLabel}
-                  </p>
-                )
+                <p className="text-xs text-amber-700 font-medium mt-0.5">
+                  Not reconstituted yet
+                </p>
               )}
             </div>
           </div>
