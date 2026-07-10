@@ -4,6 +4,8 @@
 
 ![Pins](public/icon-192.png)
 
+**Current release:** [v1.0.1](CHANGELOG.md) (2026-07-09) · Live: [pins-app.vercel.app](https://pins-app.vercel.app)
+
 ## Features
 
 - **Visual body map** — log injections on front/back anatomical sites; pins color by recency (red &lt;24h, yellow &lt;7d, green older)
