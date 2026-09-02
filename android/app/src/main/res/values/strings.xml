@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Pins</string>
+    <string name="title_activity_main">Pins</string>
+    <string name="package_name">com.two20tech.pins</string>
+    <string name="custom_url_scheme">com.two20tech.pins</string>
+</resources>
