@@ -6,6 +6,17 @@ import { Button } from '@/components/ui/button';
 
 type AuthMode = 'sign-in' | 'sign-up';
 
+function formatSignInError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes('invalid login credentials') || lower.includes('invalid_credentials')) {
+    return 'No confirmed Pins account for that email and password. If you just signed up, check inbox and spam for the confirmation link — Sign In will fail until you tap it. If you have not created an account yet, use Sign Up.';
+  }
+  if (lower.includes('email not confirmed')) {
+    return 'Confirm your email first. Check inbox and spam, then tap the Pins confirmation link.';
+  }
+  return message;
+}
+
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>('sign-in');
   const [email, setEmail] = useState('');
@@ -13,10 +24,12 @@ export default function Auth() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
 
   const resetMessages = () => {
     setError('');
     setInfo('');
+    setShowResend(false);
   };
 
   if (!isSupabaseConfigured) {
@@ -51,8 +64,15 @@ export default function Auth() {
       password,
       options: { emailRedirectTo: getAuthRedirectUrl() },
     });
-    if (signUpError) setError(signUpError.message);
-    else setInfo('Check your email — tap the link to confirm and you\'ll land in the app, signed in.');
+    if (signUpError) {
+      setError(signUpError.message);
+      if (signUpError.message.toLowerCase().includes('already registered')) {
+        setShowResend(true);
+      }
+    } else {
+      setInfo('Check your email (and spam) — tap the confirmation link. Sign In will say “Invalid login credentials” until that link is opened.');
+      setShowResend(true);
+    }
     setLoading(false);
   };
 
@@ -68,19 +88,70 @@ export default function Auth() {
       email: email.trim(),
       password,
     });
-    if (signInError) setError(signInError.message);
+    if (signInError) {
+      setError(formatSignInError(signInError.message));
+      setShowResend(true);
+    }
+    setLoading(false);
+  };
+
+  const resendConfirmation = async () => {
+    resetMessages();
+    if (!email.trim()) {
+      setError('Enter your email first, then resend the confirmation link.');
+      return;
+    }
+    setLoading(true);
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: { emailRedirectTo: getAuthRedirectUrl() },
+    });
+    if (resendError) setError(resendError.message);
+    else setInfo('Confirmation email sent. Check inbox and spam, then tap the link before signing in.');
+    setShowResend(true);
     setLoading(false);
   };
 
   const googleSignIn = async () => {
     resetMessages();
     setLoading(true);
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: getAuthRedirectUrl() },
+      options: {
+        redirectTo: getAuthRedirectUrl(),
+        skipBrowserRedirect: true,
+        scopes: 'email profile',
+        queryParams: { prompt: 'select_account' },
+      },
     });
-    if (oauthError) setError(oauthError.message);
-    setLoading(false);
+    if (oauthError) {
+      setError(oauthError.message);
+      setLoading(false);
+      return;
+    }
+    const oauthUrl = data.url;
+    if (!oauthUrl) {
+      setError('Google sign-in URL was not returned.');
+      setLoading(false);
+      return;
+    }
+    let clientId = '';
+    try {
+      clientId = new URL(oauthUrl).searchParams.get('client_id') ?? '';
+    } catch {
+      setError('Google sign-in URL was invalid.');
+      setLoading(false);
+      return;
+    }
+    if (!clientId.endsWith('.apps.googleusercontent.com')) {
+      setError(
+        `Google is misconfigured in Supabase. Client ID is currently "${clientId || '(empty)'}" — it must be a Google Cloud Web client ending in .apps.googleusercontent.com. Open Authentication → Providers → Google and replace Pins.App with the real Client ID + Secret.`,
+      );
+      setLoading(false);
+      return;
+    }
+    window.location.assign(oauthUrl);
   };
 
   const handleSubmit = () => {
@@ -134,6 +205,19 @@ export default function Auth() {
             <FcGoogle className="text-lg" />
             Continue with Google
           </Button>
+          <p className="text-[11px] text-muted-foreground text-center -mt-2">
+            Google is currently broken: Supabase still has Client ID{' '}
+            <code className="font-mono">Pins.App</code>. Use email until that is replaced in{' '}
+            <a
+              className="text-primary underline"
+              href="https://supabase.com/dashboard/project/ucijobfqdwkqhdqdffno/auth/providers"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Authentication → Providers → Google
+            </a>
+            .
+          </p>
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <div className="h-px flex-1 bg-border" />
@@ -179,6 +263,16 @@ export default function Auth() {
           <Button className="w-full" disabled={loading} onClick={handleSubmit}>
             {loading ? 'Please wait…' : mode === 'sign-in' ? 'Sign In' : 'Create Account'}
           </Button>
+          {showResend && (
+            <button
+              type="button"
+              className="w-full text-xs text-muted-foreground hover:text-primary"
+              disabled={loading}
+              onClick={() => void resendConfirmation()}
+            >
+              Resend confirmation email
+            </button>
+          )}
         </div>
       </div>
     </div>
