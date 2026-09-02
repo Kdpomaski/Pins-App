@@ -4,7 +4,8 @@
   "installCommand": "npm install",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/legal/:path*", "destination": "/legal/:path*" },
+    { "source": "/((?!legal/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
