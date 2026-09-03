@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { Mail, Lock } from 'lucide-react';
 import { supabase, getAuthRedirectUrl, isSupabaseConfigured } from '@/lib/supabase';
+import {
+  GOOGLE_PROVIDER_DASHBOARD,
+  inspectGoogleOAuthClientId,
+  startGoogleSignIn,
+} from '@/lib/google-oauth';
 import { Button } from '@/components/ui/button';
 
 type AuthMode = 'sign-in' | 'sign-up';
+type GoogleStatus = 'unknown' | 'ok' | 'misconfigured';
 
 function formatSignInError(message: string): string {
   const lower = message.toLowerCase();
@@ -25,12 +31,27 @@ export default function Auth() {
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [showResend, setShowResend] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState<GoogleStatus>('unknown');
+  const [googleClientId, setGoogleClientId] = useState('');
 
   const resetMessages = () => {
     setError('');
     setInfo('');
     setShowResend(false);
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    void inspectGoogleOAuthClientId().then((result) => {
+      if (cancelled) return;
+      if (result.error && !result.clientId) return;
+      setGoogleClientId(result.clientId);
+      setGoogleStatus(result.valid ? 'ok' : 'misconfigured');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (!isSupabaseConfigured) {
     return (
@@ -114,50 +135,26 @@ export default function Auth() {
   };
 
   const googleSignIn = async () => {
+    if (googleStatus === 'misconfigured') return;
     resetMessages();
     setLoading(true);
-    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: getAuthRedirectUrl(),
-        skipBrowserRedirect: true,
-        scopes: 'email profile',
-        queryParams: { prompt: 'select_account' },
-      },
-    });
+    const { error: oauthError } = await startGoogleSignIn();
     if (oauthError) {
-      setError(oauthError.message);
-      setLoading(false);
-      return;
+      setError(oauthError);
+      const looksBad =
+        oauthError.toLowerCase().includes('misconfigured') ||
+        oauthError.toLowerCase().includes('pins.app');
+      if (looksBad) setGoogleStatus('misconfigured');
     }
-    const oauthUrl = data.url;
-    if (!oauthUrl) {
-      setError('Google sign-in URL was not returned.');
-      setLoading(false);
-      return;
-    }
-    let clientId = '';
-    try {
-      clientId = new URL(oauthUrl).searchParams.get('client_id') ?? '';
-    } catch {
-      setError('Google sign-in URL was invalid.');
-      setLoading(false);
-      return;
-    }
-    if (!clientId.endsWith('.apps.googleusercontent.com')) {
-      setError(
-        `Google is misconfigured in Supabase. Client ID is currently "${clientId || '(empty)'}" — it must be a Google Cloud Web client ending in .apps.googleusercontent.com. Open Authentication → Providers → Google and replace Pins.App with the real Client ID + Secret.`,
-      );
-      setLoading(false);
-      return;
-    }
-    window.location.assign(oauthUrl);
+    setLoading(false);
   };
 
   const handleSubmit = () => {
     if (mode === 'sign-in') void signIn();
     else void signUp();
   };
+
+  const googleDisabled = loading || googleStatus === 'misconfigured';
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex items-center justify-center px-4 py-10">
@@ -195,36 +192,6 @@ export default function Auth() {
             ))}
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled={loading}
-            onClick={() => void googleSignIn()}
-          >
-            <FcGoogle className="text-lg" />
-            Continue with Google
-          </Button>
-          <p className="text-[11px] text-muted-foreground text-center -mt-2">
-            Google is currently broken: Supabase still has Client ID{' '}
-            <code className="font-mono">Pins.App</code>. Use email until that is replaced in{' '}
-            <a
-              className="text-primary underline"
-              href="https://supabase.com/dashboard/project/ucijobfqdwkqhdqdffno/auth/providers"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Authentication → Providers → Google
-            </a>
-            .
-          </p>
-
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            <span>or email</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
           <div className="space-y-3">
             <div className="relative">
               <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -233,6 +200,7 @@ export default function Auth() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
+                autoComplete="email"
                 className="w-full pl-10 pr-3 py-3 bg-input/50 border border-border rounded-lg focus:ring-1 focus:ring-primary focus:outline-none"
               />
             </div>
@@ -243,6 +211,7 @@ export default function Auth() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
+                autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
                 className="w-full pl-10 pr-3 py-3 bg-input/50 border border-border rounded-lg focus:ring-1 focus:ring-primary focus:outline-none"
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               />
@@ -272,6 +241,56 @@ export default function Auth() {
             >
               Resend confirmation email
             </button>
+          )}
+
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            <span>or Google</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={googleDisabled}
+            title={
+              googleStatus === 'misconfigured'
+                ? 'Google sign-in is disabled until a real Web Client ID is pasted into Supabase.'
+                : undefined
+            }
+            onClick={() => void googleSignIn()}
+          >
+            <FcGoogle className="text-lg" />
+            Continue with Google
+          </Button>
+          {googleStatus !== 'ok' && (
+            <p className="text-[11px] text-muted-foreground text-center -mt-2" role="status">
+              Google is unavailable until Supabase has a real Web Client ID
+              {googleClientId ? (
+                <>
+                  {' '}
+                  (currently{' '}
+                  <code className="font-mono">{googleClientId}</code>
+                  ).
+                </>
+              ) : (
+                <>
+                  {' '}
+                  (placeholder <code className="font-mono">Pins.App</code> is not valid).
+                </>
+              )}{' '}
+              Use email above. Replace it in{' '}
+              <a
+                className="text-primary underline"
+                href={GOOGLE_PROVIDER_DASHBOARD}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Authentication → Providers → Google
+              </a>
+              . Steps: <code className="font-mono">GOOGLE-OAUTH.md</code>.
+            </p>
           )}
         </div>
       </div>
