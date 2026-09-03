@@ -75,6 +75,8 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 4. Set **Site URL** to your app origin (e.g. `http://localhost:5173`)
 5. Add redirect URL: `http://localhost:5173/auth/callback` (and production URL when deployed)
 
+Google sign-in currently 401s because the Supabase Google Client ID is still the placeholder `Pins.App`. That is not something the app can invent. See **[GOOGLE-OAUTH.md](GOOGLE-OAUTH.md)** — create a Google Cloud **Web** client and paste the Client ID + Secret into project `ucijobfqdwkqhdqdffno`. Email/password login is the primary path until then.
+
 ## Scripts
 
 | Command | Description |
