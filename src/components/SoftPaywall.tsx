@@ -2,7 +2,7 @@
  * Soft paywall modal — Pro upgrade prompts only.
  * Never blocks basic dose log or site rotation.
  * Shown only when VITE_PAYWALL_ENABLED=true.
- * Placeholder copy; Botfluencer may replace.
+ * Copy: /workspace/bus/drafts/2026-09-03-paywall-ui-strings.md
  */
 
 import { useState } from 'react';

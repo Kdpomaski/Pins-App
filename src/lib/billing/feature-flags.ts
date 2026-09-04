@@ -21,7 +21,7 @@ export function isPaywallEnabled(): boolean {
 }
 
 /**
- * Show founding lifetime ($39.99 bundle) offer in paywall UI.
+ * Show founding lifetime ($79 bundle) offer in paywall UI.
  * Default false until TF founding window is intentionally enabled.
  */
 export function isFoundingLifetimeEnabled(): boolean {
