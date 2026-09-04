@@ -156,7 +156,7 @@ export function PinsProvider({ children }: { children: ReactNode }) {
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         ),
         inventory,
-        schedule: scheduleForRemainingInventory(prev.schedule, inventory),
+        schedule: scheduleForRemainingInventory<ScheduledDose>(prev.schedule, inventory),
       };
     });
 

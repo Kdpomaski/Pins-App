@@ -14,3 +14,5 @@ ios/App/build
 *.keystore
 *.jks
 *.mobileprovision
+# Signing secrets — never commit
+key.properties

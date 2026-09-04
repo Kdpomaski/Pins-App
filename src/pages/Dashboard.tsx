@@ -4,6 +4,8 @@ import { Flame, Syringe, Droplets, Droplet, Calculator, Shield } from "lucide-re
 import { Link } from "wouter";
 import { usePinsStore } from "@/lib/store";
 import { SecurityBadge, SecuritySettings } from "@/components/SecuritySettings";
+import { openResearchCatalog } from "@/lib/billing/catalog-link";
+import { CONTEXT_COPY } from "@/lib/billing/copy";
 
 // ── Brand logo matching the uploaded Pins identity ────────────────────────────
 function PinsLogoIcon({ size = 36 }: { size?: number }) {
@@ -194,6 +196,14 @@ export default function Dashboard() {
                 <p className="text-sm text-red-600/80 mt-1">
                   {lowInventory.map((i) => i.name).join(", ")} running low.
                 </p>
+                <p className="text-xs text-red-600/70 mt-2">{CONTEXT_COPY.lowInventory.body}</p>
+                <button
+                  type="button"
+                  onClick={() => openResearchCatalog("low_inventory")}
+                  className="mt-3 text-sm font-semibold text-red-700 underline underline-offset-2"
+                >
+                  Browse research catalog
+                </button>
               </div>
             </div>
           </section>

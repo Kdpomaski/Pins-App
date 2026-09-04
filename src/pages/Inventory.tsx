@@ -2,6 +2,10 @@ import { useMemo, useState } from "react";
 import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
 import { usePinsStore, InventoryItem } from "@/lib/store";
+import { useBilling } from "@/lib/billing/billing-context";
+import { openResearchCatalog } from "@/lib/billing/catalog-link";
+import { CONTEXT_COPY } from "@/lib/billing/copy";
+import { countProtocols } from "@/lib/billing/products";
 import { sortVialsForCompound } from "@/lib/inventory-vials";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -40,6 +44,7 @@ function formatReconstitutedDate(iso?: string) {
 
 export default function Inventory() {
   const { data, addInventoryItem, deleteInventoryItem } = usePinsStore();
+  const { requirePro, protocolCountFromData, isPro, paywallEnabled } = useBilling();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<InventoryItem | null>(null);
 
@@ -47,6 +52,24 @@ export default function Inventory() {
     () => groupInventoryByCompound(data.inventory),
     [data.inventory],
   );
+
+  const openAddModal = () => {
+    // Adding a net-new compound beyond free protocol limit → soft Pro prompt.
+    const protocols = Math.max(
+      protocolCountFromData(data),
+      compoundGroups.length,
+      countProtocols(data.schedule),
+    );
+    // Allow opening the modal; AddInventoryModal enforces on save for new compounds.
+    void protocols;
+    setIsAddModalOpen(true);
+  };
+
+  const handleAddVialToCompoundGated = (template: InventoryItem) => {
+    // Extra vials for a compound = advanced inventory (Pro).
+    if (!requirePro("advanced_inventory", { reason: "generic_pro" })) return;
+    handleAddVialToCompound(template);
+  };
 
   const pendingScheduleCount = pendingDelete
     ? data.schedule.filter((dose) => dose.compound === pendingDelete.name).length
@@ -82,19 +105,36 @@ export default function Inventory() {
         <header className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
           <button
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={openAddModal}
             className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary/20 transition-colors"
           >
             <Plus size={20} />
           </button>
         </header>
 
+        {data.inventory.some((v) => v.totalVolume > 0 && v.remainingVolume / v.totalVolume < 0.2) && (
+          <button
+            type="button"
+            onClick={() => openResearchCatalog("low_inventory")}
+            className="w-full text-left text-sm rounded-2xl border border-border bg-card px-4 py-3 text-muted-foreground hover:bg-muted/40 transition-colors"
+          >
+            {CONTEXT_COPY.lowInventory.body}
+            <span className="block text-primary font-medium mt-1">Research catalog (website)</span>
+          </button>
+        )}
+
+        {!isPro && paywallEnabled && (
+          <p className="text-xs text-muted-foreground">
+            Free includes 1 protocol and basic inventory. Extra vials and advanced tools are Pins Pro.
+          </p>
+        )}
+
         <div className="grid gap-4">
           {data.inventory.length === 0 ? (
             <div className="text-center p-8 bg-card rounded-2xl border border-border mt-4">
               <Droplet size={40} className="mx-auto text-muted-foreground mb-4 opacity-50" />
               <p className="text-muted-foreground">Your inventory is empty.</p>
-              <button onClick={() => setIsAddModalOpen(true)} className="mt-4 text-primary font-medium">
+              <button onClick={openAddModal} className="mt-4 text-primary font-medium">
                 Add your first vial
               </button>
             </div>
@@ -103,7 +143,7 @@ export default function Inventory() {
               <CompoundGroupCard
                 key={name}
                 vials={vials}
-                onAddVial={() => handleAddVialToCompound(vials[0])}
+                onAddVial={() => handleAddVialToCompoundGated(vials[0])}
                 onDeleteVial={setPendingDelete}
               />
             ))
@@ -510,6 +550,7 @@ function AddInventoryModal({
   onAdd: (item: Omit<InventoryItem, "id" | "updatedAt">) => { ok: true } | { ok: false; error: string };
 }) {
   const { data } = usePinsStore();
+  const { requirePro, protocolCountFromData } = useBilling();
   const [name, setName] = useState("");
   const [concentration, setConcentration] = useState("");
   const [totalVolume, setTotalVolume] = useState("");
@@ -545,6 +586,21 @@ function AddInventoryModal({
     const isNewCompound = !data.inventory.some(
       (v) => v.name.toLowerCase() === trimmedName.toLowerCase(),
     );
+
+    if (isNewCompound) {
+      const protocolCount = Math.max(
+        protocolCountFromData(data),
+        new Set(data.inventory.map((v) => v.name.toLowerCase())).size,
+      );
+      if (!requirePro("protocols", { protocolCount, reason: "second_protocol" })) {
+        return;
+      }
+    } else {
+      // Additional vial of existing compound = advanced inventory.
+      if (!requirePro("advanced_inventory", { reason: "generic_pro" })) {
+        return;
+      }
+    }
 
     const result = onAdd({
       name: trimmedName,
