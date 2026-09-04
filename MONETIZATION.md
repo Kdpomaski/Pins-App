@@ -10,7 +10,7 @@ Publisher on stores: **220 Tech LLC** only. Bioworx is the off-app product brand
 |---|---|---|
 | `VITE_PAYWALL_ENABLED` | **false** | Soft paywall UI + soft Pro gates. Keep **off** for TestFlight free ship. |
 | `VITE_BILLING_MOCK` | false | DEV/web only: purchase/restore stubs grant local `isPro`. Never on production store builds. |
-| `VITE_FOUNDING_LIFETIME` | **false** | Show founding **$79** Pins+Pets bundle offer in soft paywall (TestFlight window). |
+| `VITE_FOUNDING_LIFETIME` | **false** | Show founding **$39.99** Pins+Pets bundle offer in soft paywall (TestFlight window). |
 
 Set in `.env` / `.env.local` (never commit secrets):
 
@@ -37,7 +37,7 @@ Reserved stub IDs (do **not** create in ASC/Play until Kevin decides + money gat
 
 | Period | Product ID | Stub display |
 |---|---|---|
-| Bundle lifetime (founding TF) | `com.two20tech.bundle.pro.lifetime` | $79 (UI only; flag `VITE_FOUNDING_LIFETIME`, default off) |
+| Bundle lifetime (founding TF) | `com.two20tech.bundle.pro.lifetime` | $39.99 (UI only; flag `VITE_FOUNDING_LIFETIME`, default off) |
 | Bundle monthly/yearly | `com.two20tech.bundle.pro.monthly` / `.yearly` | TBD |
 
 Pins single-app SKUs above are the locked pricing for this app.

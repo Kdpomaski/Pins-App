@@ -69,7 +69,7 @@ export const PINS_PRODUCTS: ProductStub[] = [
   },
 ];
 
-/** Bundle stubs — founding lifetime display $79 (TestFlight). Monthly/yearly TBD. */
+/** Bundle stubs — founding lifetime display $39.99 (TestFlight). Monthly/yearly TBD. */
 export const BUNDLE_PRODUCTS: ProductStub[] = [
   {
     id: BUNDLE_PRODUCT_IDS.monthly,
@@ -92,8 +92,8 @@ export const BUNDLE_PRODUCTS: ProductStub[] = [
   {
     id: BUNDLE_PRODUCT_IDS.lifetime,
     period: 'lifetime',
-    displayPrice: '$79',
-    priceUsd: 79,
+    displayPrice: '$39.99',
+    priceUsd: 39.99,
     founding: true,
     label: 'Founding Lifetime (Pins + Pets)',
     scope: 'bundle',
@@ -172,7 +172,7 @@ export function listPinsOfferProducts(): ProductStub[] {
   return [...PINS_PRODUCTS].sort((a, b) => Number(Boolean(b.primary)) - Number(Boolean(a.primary)));
 }
 
-/** Founding TF lifetime bundle ($79) — shown when VITE_FOUNDING_LIFETIME=true. */
+/** Founding TF lifetime bundle ($39.99) — shown when VITE_FOUNDING_LIFETIME=true. */
 export function getFoundingBundleProduct(): ProductStub | undefined {
   return getProductById(BUNDLE_PRODUCT_IDS.lifetime);
 }
