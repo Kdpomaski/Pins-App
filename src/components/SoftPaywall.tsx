@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useEntitlements, type SoftPaywallReason } from '@/lib/billing/entitlement-context';
+import { useBilling, type SoftPaywallReason } from '@/lib/billing/billing-context';
 import {
   BUNDLE_COPY,
   CONTEXT_COPY,
@@ -51,7 +51,7 @@ export function SoftPaywall() {
     purchaseFounding,
     restore,
     paywallEnabled,
-  } = useEntitlements();
+  } = useBilling();
 
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);

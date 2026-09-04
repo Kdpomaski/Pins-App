@@ -10,6 +10,7 @@ Publisher on stores: **220 Tech LLC** only. Bioworx is the off-app product brand
 |---|---|---|
 | `VITE_PAYWALL_ENABLED` | **false** | Soft paywall UI + soft Pro gates. Keep **off** for TestFlight free ship. |
 | `VITE_BILLING_MOCK` | false | DEV/web only: purchase/restore stubs grant local `isPro`. Never on production store builds. |
+| `VITE_FOUNDING_LIFETIME` | **false** | Optional TF founding/bundle offer UI. Bundle SKUs are stubs only — **Kevin open question**; do not create in consoles. |
 
 Set in `.env` / `.env.local` (never commit secrets):
 
@@ -62,3 +63,7 @@ Helpers: `canAccessFeature`, `requirePro`, `filterMapHistoryLogs` in `src/lib/bi
 - No live paid launch without Kevin.
 - Creating Paid Apps agreement / billing products = Kevin only.
 - This PR ships **stubs + flag-off paywall** only — safe for TestFlight free.
+
+## Do not create live IAP
+
+No App Store Connect / Play Console product creation and no Paid Apps agreement without Kevin.

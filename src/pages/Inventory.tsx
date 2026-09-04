@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
 import { usePinsStore, InventoryItem } from "@/lib/store";
-import { useBilling } from "@/lib/billing/billing-context";
+import { useEntitlements } from "@/lib/billing/entitlement-context";
 import { openResearchCatalog } from "@/lib/billing/catalog-link";
 import { CONTEXT_COPY } from "@/lib/billing/copy";
 import { countProtocols } from "@/lib/billing/products";
@@ -44,7 +44,7 @@ function formatReconstitutedDate(iso?: string) {
 
 export default function Inventory() {
   const { data, addInventoryItem, deleteInventoryItem } = usePinsStore();
-  const { requirePro, protocolCountFromData, isPro, paywallEnabled } = useBilling();
+  const { requirePro, protocolCountFromData, isPro, paywallEnabled } = useEntitlements();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<InventoryItem | null>(null);
 
@@ -550,7 +550,7 @@ function AddInventoryModal({
   onAdd: (item: Omit<InventoryItem, "id" | "updatedAt">) => { ok: true } | { ok: false; error: string };
 }) {
   const { data } = usePinsStore();
-  const { requirePro, protocolCountFromData } = useBilling();
+  const { requirePro, protocolCountFromData } = useEntitlements();
   const [name, setName] = useState("");
   const [concentration, setConcentration] = useState("");
   const [totalVolume, setTotalVolume] = useState("");
