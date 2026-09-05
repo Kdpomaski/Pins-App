@@ -16,3 +16,4 @@ ios/App/build
 *.mobileprovision
 # Signing secrets — never commit
 key.properties
+.env.tf.local

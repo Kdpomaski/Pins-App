@@ -36,11 +36,9 @@ export default function Auth() {
     return (
       <div className="min-h-[100dvh] bg-background text-foreground flex items-center justify-center px-4">
         <div className="w-full max-w-md border border-border rounded-2xl bg-card p-6 space-y-3 text-sm">
-          <h1 className="text-lg font-semibold">Supabase not configured</h1>
+          <h1 className="text-lg font-semibold">Sign-in unavailable</h1>
           <p className="text-muted-foreground">
-            Add <code className="text-foreground">VITE_SUPABASE_URL</code> and{' '}
-            <code className="text-foreground">VITE_SUPABASE_ANON_KEY</code> in your Vercel project
-            environment variables, then <strong>redeploy</strong> (Vite bakes env vars in at build time).
+            This build was shipped without authentication configuration. Please update to the latest TestFlight build.
           </p>
         </div>
       </div>
@@ -170,6 +168,7 @@ export default function Auth() {
           />
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Welcome to Pins</h1>
+          <p className="text-xs text-muted-foreground mt-1">Email sign-in is recommended for TestFlight. Google may be unavailable.</p>
             <p className="text-sm text-muted-foreground mt-1">
               Beta · Peptide &amp; Injection Protocol Tracker
             </p>
