@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { Mail, Lock } from 'lucide-react';
 import { supabase, getAuthRedirectUrl, isSupabaseConfigured } from '@/lib/supabase';
+import { startGoogleOAuth } from '@/lib/native-oauth';
 import { Button } from '@/components/ui/button';
 
 type AuthMode = 'sign-in' | 'sign-up';
@@ -114,30 +115,16 @@ export default function Auth() {
   const googleSignIn = async () => {
     resetMessages();
     setLoading(true);
-    // Trust Supabase Auth config. The authorize URL is hosted by Supabase and does
-    // not include Google's client_id query param — reading it here always looked
-    // "empty" / Pins.App even after the dashboard was fixed.
-    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: getAuthRedirectUrl(),
-        skipBrowserRedirect: true,
-        scopes: 'email profile',
-        queryParams: { prompt: 'select_account' },
-      },
-    });
+    // Native: open system browser and return via com.two20tech.pins://auth/callback
+    // (handled by ensureNativeAuthDeepLinkListener). Web: same-origin /auth/callback.
+    const { error: oauthError } = await startGoogleOAuth();
     if (oauthError) {
-      setError(oauthError.message);
+      setError(oauthError);
       setLoading(false);
       return;
     }
-    const oauthUrl = data.url;
-    if (!oauthUrl) {
-      setError('Google sign-in URL was not returned.');
-      setLoading(false);
-      return;
-    }
-    window.location.assign(oauthUrl);
+    // Native Browser stays open until deep link; web navigates away.
+    setLoading(false);
   };
 
   const handleSubmit = () => {

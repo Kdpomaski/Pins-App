@@ -68,5 +68,16 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.two20tech.pins</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.two20tech.pins</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
