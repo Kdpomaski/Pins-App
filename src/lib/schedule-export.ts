@@ -9,6 +9,7 @@ import {
   setMinutes,
   startOfDay,
 } from 'date-fns';
+import { formatBlendBreakdown, resolveBlendComponents } from '@/lib/blend';
 import type { InjectionLog, InventoryItem, PinsData } from '@/lib/store';
 
 export type ExportFormat = 'calendar' | 'text';
@@ -172,6 +173,18 @@ function icsDate(date: Date): string {
   return format(date, "yyyyMMdd'T'HHmmss");
 }
 
+function icsBlendDescription(
+  compound: string,
+  dose: number,
+  unit: 'mg' | 'mcg',
+  data: PinsData,
+): string {
+  const item = data.inventory.find((i) => i.name === compound);
+  const breakdown = formatBlendBreakdown(item?.blendComponents);
+  const blend = breakdown ? ` Blend ${compound}: ${breakdown}.` : '';
+  return `Scheduled ${compound} (${dose} ${unit}).${blend} Personal record only.`;
+}
+
 export function buildIcsCalendar(compounds: string[], data: PinsData, options: ExportOptions): string {
   const doses = buildFutureDoses(compounds, data, {
     start: options.range.from,
@@ -194,7 +207,7 @@ export function buildIcsCalendar(compounds: string[], data: PinsData, options: E
       `DTSTART:${icsDate(dose.at)}`,
       `DTEND:${icsDate(end)}`,
       `SUMMARY:${dose.compound} - ${dose.dose} ${dose.unit}`,
-      `DESCRIPTION:Scheduled dose of ${dose.compound} (${dose.dose} ${dose.unit}). Import into Google or Apple Calendar.`,
+      `DESCRIPTION:${icsBlendDescription(dose.compound, dose.dose, dose.unit, data)}`,
       'END:VEVENT',
     );
   });
@@ -222,7 +235,9 @@ export function buildAdministrationText(compounds: string[], data: PinsData, opt
   const body = logs.map((log: InjectionLog) => {
     const when = format(new Date(log.timestamp), 'yyyy-MM-dd HH:mm');
     const site = log.siteId.replace(/-/g, ' ');
-    return `${when} | ${log.compound} | ${log.dose} ${log.unit} | Site: ${site}${log.notes ? ` | Notes: ${log.notes}` : ''}`;
+    const blend = formatBlendBreakdown(resolveBlendComponents(log, data.inventory));
+    const name = blend ? `${log.compound} [${blend}]` : log.compound;
+    return `${when} | ${name} | ${log.dose} ${log.unit} | Site: ${site}${log.notes ? ` | Notes: ${log.notes}` : ''}`;
   });
 
   return [...header, ...body].join('\n');

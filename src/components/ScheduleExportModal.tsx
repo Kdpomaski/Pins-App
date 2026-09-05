@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { addDays, format, parseISO, startOfDay, subDays } from 'date-fns';
 import { Download, Calendar, FileText } from 'lucide-react';
+import { formatBlendBreakdown } from '@/lib/blend';
 import { usePinsStore } from '@/lib/store';
 import {
   allCompoundNames,
@@ -244,6 +245,11 @@ export function ScheduleExportModal({ open, onClose }: Props) {
                       />
                       <span className="flex-1 text-sm">
                         <span className="font-medium">{name}</span>
+                        {item?.isBlend && item.blendComponents?.length ? (
+                          <span className="block text-xs text-muted-foreground">
+                            {formatBlendBreakdown(item.blendComponents)}
+                          </span>
+                        ) : null}
                         {formatType === 'calendar' && item && (
                           <span className="block text-xs text-muted-foreground">
                             {item.frequency ?? 'No frequency'} · ~{dosesLeft} doses left

@@ -161,7 +161,10 @@ const BodyMap: React.FC<{
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span className="truncate flex-1">{item.name}</span>
+                    <span className="truncate flex-1">
+                      {item.name}
+                      {item.isBlend ? ' · blend' : ''}
+                    </span>
                     {vialCount > 1 && (
                       <span className="text-xs font-mono text-muted-foreground shrink-0">{vialCount}</span>
                     )}

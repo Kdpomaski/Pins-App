@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, MapPin, Clock } from "lucide-react";
+import { formatBlendBreakdown } from "@/lib/blend";
 import { usePinsStore } from "@/lib/store";
 import { useBilling } from "@/lib/billing/billing-context";
 import { bodySites, siteLabel } from "@/lib/body-map-data";
@@ -125,6 +126,7 @@ export function InjectionLoggerModal({
     // Soft paywall AFTER first real dose — never blocks basic logging.
     const priorLogCount = data.logs.filter((l) => !l.deletedAt).length;
 
+    const inventoryItem = data.inventory.find((i) => i.name === compound);
     const result = addLog({
       siteId,
       compound,
@@ -132,6 +134,9 @@ export function InjectionLoggerModal({
       unit,
       timestamp: new Date().toISOString(),
       notes: notes.trim() || undefined,
+      ...(inventoryItem?.isBlend && inventoryItem.blendComponents?.length
+        ? { blendComponents: inventoryItem.blendComponents }
+        : {}),
     });
 
     if (!result.ok) {
@@ -240,10 +245,19 @@ export function InjectionLoggerModal({
                   >
                     {compoundOptions.map((item) => (
                       <option key={item.name} value={item.name}>
-                        {item.name}
+                        {item.isBlend ? `${item.name} (blend)` : item.name}
                       </option>
                     ))}
                   </select>
+                  {(() => {
+                    const selected = compoundOptions.find((item) => item.name === compound);
+                    const breakdown = selected?.isBlend
+                      ? formatBlendBreakdown(selected.blendComponents)
+                      : "";
+                    return breakdown ? (
+                      <p className="text-xs text-muted-foreground mt-2">{breakdown}</p>
+                    ) : null;
+                  })()}
                 </div>
 
                 <div>

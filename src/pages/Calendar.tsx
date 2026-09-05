@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Download } from "lucide-react";
+import { formatBlendBreakdown, resolveBlendComponents } from "@/lib/blend";
 import { usePinsStore } from "@/lib/store";
 import { siteLabel } from "@/lib/body-map-data";
 import { ScheduleExportModal } from "@/components/ScheduleExportModal";
@@ -136,6 +137,17 @@ export default function CalendarView() {
                                     {dose.dose} {dose.unit}
                                   </span>
                                 </div>
+                                {(() => {
+                                  const breakdown = formatBlendBreakdown(
+                                    resolveBlendComponents(
+                                      log ?? { compound: dose.compound },
+                                      data.inventory,
+                                    ),
+                                  );
+                                  return breakdown ? (
+                                    <p className="text-xs text-muted-foreground mt-0.5">{breakdown}</p>
+                                  ) : null;
+                                })()}
                                 <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
                                   <span>{dose.time}</span>
                                   {log && (
@@ -166,6 +178,14 @@ export default function CalendarView() {
                                     Ad-hoc
                                   </span>
                                 </div>
+                                {(() => {
+                                  const breakdown = formatBlendBreakdown(
+                                    resolveBlendComponents(log, data.inventory),
+                                  );
+                                  return breakdown ? (
+                                    <p className="text-xs text-muted-foreground mt-0.5">{breakdown}</p>
+                                  ) : null;
+                                })()}
                                 <div className="text-xs text-muted-foreground mt-0.5">
                                   {log.dose} {log.unit} • {format(new Date(log.timestamp), "HH:mm")} •{" "}
                                   {siteLabel(log.siteId)}
