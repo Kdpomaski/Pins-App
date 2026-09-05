@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format, differenceInHours } from "date-fns";
 import { Flame, Syringe, Droplets, Droplet, Calculator, Shield } from "lucide-react";
 import { Link } from "wouter";
+import { formatBlendBreakdown, resolveBlendComponents } from "@/lib/blend";
 import { usePinsStore } from "@/lib/store";
 import { SecurityBadge, SecuritySettings } from "@/components/SecuritySettings";
 
@@ -166,6 +167,11 @@ export default function Dashboard() {
                       <div>
                         <h3 className="font-semibold text-foreground flex items-center gap-2">
                           {dose.compound}
+                          {compoundData?.isBlend && (
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/10 border border-primary/30 px-1.5 py-0.5 rounded-full">
+                              Blend
+                            </span>
+                          )}
                           {isLogged && (
                             <span className="text-[10px] bg-green-100 text-green-700 border border-border px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
                               Done
@@ -175,6 +181,11 @@ export default function Dashboard() {
                         <p className="text-sm text-muted-foreground">
                           {dose.dose} {dose.unit} at {dose.time}
                         </p>
+                        {compoundData?.isBlend && compoundData.blendComponents?.length ? (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatBlendBreakdown(compoundData.blendComponents)}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -227,6 +238,14 @@ export default function Dashboard() {
                         <span className="font-medium text-foreground">{log.compound}</span>
                         <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">{timeStr}</span>
                       </div>
+                      {(() => {
+                        const breakdown = formatBlendBreakdown(
+                          resolveBlendComponents(log, data.inventory),
+                        );
+                        return breakdown ? (
+                          <p className="text-xs text-muted-foreground truncate">{breakdown}</p>
+                        ) : null;
+                      })()}
                       <div className="flex justify-between items-baseline text-sm text-muted-foreground">
                         <span className="capitalize truncate">{siteLabel}</span>
                         <span className="ml-2 flex-shrink-0">{log.dose} {log.unit}</span>

@@ -64,12 +64,44 @@
   --ring: 234 179 8;
   --radius: 0.75rem;
   --od-green: 75 83 32;
+  /* Capacitor iOS: WKWebView draws under the status bar / Dynamic Island. */
+  --pins-safe-top: env(safe-area-inset-top, 0px);
+  --pins-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  height: 100%;
+}
+
+html,
+body {
+  overflow: hidden;
 }
 
 body {
+  height: 100%;
+  margin: 0;
   background-color: rgb(var(--background));
   color: rgb(var(--foreground));
   font-family: 'Inter', system-ui, sans-serif;
+}
+
+#root {
+  height: 100%;
+  box-sizing: border-box;
+  padding-top: var(--pins-safe-top);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+@utility pt-safe {
+  padding-top: var(--pins-safe-top);
+}
+
+@utility pb-safe {
+  padding-bottom: var(--pins-safe-bottom);
 }
 
 @layer base {
