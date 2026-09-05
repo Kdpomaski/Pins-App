@@ -36,11 +36,9 @@ export default function Auth() {
     return (
       <div className="min-h-[100dvh] bg-background text-foreground flex items-center justify-center px-4">
         <div className="w-full max-w-md border border-border rounded-2xl bg-card p-6 space-y-3 text-sm">
-          <h1 className="text-lg font-semibold">Supabase not configured</h1>
+          <h1 className="text-lg font-semibold">Sign-in unavailable</h1>
           <p className="text-muted-foreground">
-            Add <code className="text-foreground">VITE_SUPABASE_URL</code> and{' '}
-            <code className="text-foreground">VITE_SUPABASE_ANON_KEY</code> in your Vercel project
-            environment variables, then <strong>redeploy</strong> (Vite bakes env vars in at build time).
+            This build was shipped without authentication configuration. Please update to the latest TestFlight build.
           </p>
         </div>
       </div>
@@ -116,6 +114,9 @@ export default function Auth() {
   const googleSignIn = async () => {
     resetMessages();
     setLoading(true);
+    // Trust Supabase Auth config. The authorize URL is hosted by Supabase and does
+    // not include Google's client_id query param — reading it here always looked
+    // "empty" / Pins.App even after the dashboard was fixed.
     const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -133,21 +134,6 @@ export default function Auth() {
     const oauthUrl = data.url;
     if (!oauthUrl) {
       setError('Google sign-in URL was not returned.');
-      setLoading(false);
-      return;
-    }
-    let clientId = '';
-    try {
-      clientId = new URL(oauthUrl).searchParams.get('client_id') ?? '';
-    } catch {
-      setError('Google sign-in URL was invalid.');
-      setLoading(false);
-      return;
-    }
-    if (!clientId.endsWith('.apps.googleusercontent.com')) {
-      setError(
-        `Google is misconfigured in Supabase. Client ID is currently "${clientId || '(empty)'}" — it must be a Google Cloud Web client ending in .apps.googleusercontent.com. Open Authentication → Providers → Google and replace Pins.App with the real Client ID + Secret.`,
-      );
       setLoading(false);
       return;
     }
@@ -170,6 +156,7 @@ export default function Auth() {
           />
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Welcome to Pins</h1>
+          <p className="text-xs text-muted-foreground mt-1">Sign in with Email or Google.</p>
             <p className="text-sm text-muted-foreground mt-1">
               Beta · Peptide &amp; Injection Protocol Tracker
             </p>
@@ -205,19 +192,6 @@ export default function Auth() {
             <FcGoogle className="text-lg" />
             Continue with Google
           </Button>
-          <p className="text-[11px] text-muted-foreground text-center -mt-2">
-            Google is currently broken: Supabase still has Client ID{' '}
-            <code className="font-mono">Pins.App</code>. Use email until that is replaced in{' '}
-            <a
-              className="text-primary underline"
-              href="https://supabase.com/dashboard/project/ucijobfqdwkqhdqdffno/auth/providers"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Authentication → Providers → Google
-            </a>
-            .
-          </p>
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <div className="h-px flex-1 bg-border" />

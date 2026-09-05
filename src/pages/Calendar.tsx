@@ -4,11 +4,18 @@ import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Download } from "lucid
 import { usePinsStore } from "@/lib/store";
 import { siteLabel } from "@/lib/body-map-data";
 import { ScheduleExportModal } from "@/components/ScheduleExportModal";
+import { useBilling } from "@/lib/billing/billing-context";
 
 export default function CalendarView() {
   const { data } = usePinsStore();
+  const { requirePro } = useBilling();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [exportOpen, setExportOpen] = useState(false);
+
+  const handleExportClick = () => {
+    if (!requirePro("export_pdf", { reason: "export_locked" })) return;
+    setExportOpen(true);
+  };
 
   const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
@@ -23,7 +30,7 @@ export default function CalendarView() {
 
         <header className="flex justify-between items-center mb-8">
           <button
-            onClick={() => setExportOpen(true)}
+            onClick={handleExportClick}
             className="flex items-center gap-1.5 text-sm font-medium border border-border bg-card px-3 py-2 rounded-full hover:bg-muted/50 transition-colors"
             aria-label="Export schedule"
           >

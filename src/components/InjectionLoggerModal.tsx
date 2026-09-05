@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, MapPin, Clock } from "lucide-react";
 import { usePinsStore } from "@/lib/store";
+import { useBilling } from "@/lib/billing/billing-context";
 import { bodySites, siteLabel } from "@/lib/body-map-data";
 import type { InventoryItem } from "@/lib/store";
 
@@ -42,6 +43,7 @@ export function InjectionLoggerModal({
   defaultCompoundName,
 }: InjectionLoggerModalProps) {
   const { data, addLog } = usePinsStore();
+  const { maybeShowSoftPaywallAfterFirstLog } = useBilling();
 
   const compoundOptions = useMemo(
     () => compoundsByUsage(data.inventory, data.logs),
@@ -120,6 +122,9 @@ export function InjectionLoggerModal({
       return;
     }
 
+    // Soft paywall AFTER first real dose — never blocks basic logging.
+    const priorLogCount = data.logs.filter((l) => !l.deletedAt).length;
+
     const result = addLog({
       siteId,
       compound,
@@ -134,6 +139,7 @@ export function InjectionLoggerModal({
       return;
     }
 
+    maybeShowSoftPaywallAfterFirstLog(priorLogCount);
     onClose();
   };
 
