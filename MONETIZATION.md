@@ -27,7 +27,7 @@ Do **not** create these in App Store Connect or Google Play Console until Kevin 
 
 | Period | Product ID | Stub price | Notes |
 |---|---|---:|---|
-| Monthly | `com.two20tech.pins.pro.monthly` | $6.99/mo | |
+| Monthly | `com.two20tech.pins.pro.monthly` | $4.99/mo | LOCKED 2026-09-05 |
 | Annual | `com.two20tech.pins.pro.yearly` | **$49.99/yr** | **Primary** offer |
 | Lifetime | `com.two20tech.pins.pro.lifetime` | $99 | |
 
@@ -76,3 +76,10 @@ Helpers: `canAccessFeature`, `requirePro`, `filterMapHistoryLogs` in `src/lib/bi
 ## Do not create live IAP
 
 No App Store Connect / Play Console product creation and no Paid Apps agreement without Kevin.
+
+
+## Free vs Pro (2026-09-05)
+- Free: **2 protocols**, **full map history**, log/reminders/recon/rotation/local storage
+- Pro: unlimited protocols, photos/labs/trends, cloud sync, export/PDF, advanced inventory
+- Monthly **$4.99**; annual $49.99; lifetime $99; founding TF bundle $39.99
+- Bioworx / website catalog CTAs deferred — zero Bioworx mentions in SoftPaywall for now

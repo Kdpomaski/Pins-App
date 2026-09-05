@@ -38,7 +38,7 @@ function BodyMapRoute({
     dose: log.dose,
     time: log.timestamp,
   }));
-  // Free tier: limited map history when paywall enforcement is on. Never blocks logging.
+  // Full map history is Free (Kevin 2026-09-05) — filter is a no-op.
   const logs = filterMapHistoryLogs(mapped, {
     isPro,
     enforce: isPaywallEnabled(),

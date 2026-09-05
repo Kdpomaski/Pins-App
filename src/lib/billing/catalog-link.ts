@@ -1,3 +1,4 @@
+/** DEFERRED (Kevin 2026-09-05): no website catalog CTAs in SoftPaywall for now. Kept for possible later use. Never sells peptides in-app. */
 /**
  * Website deep-link helper for the research catalog (220bioworx.com).
  * NEVER open in-app peptide checkout — commerce stays on the website.

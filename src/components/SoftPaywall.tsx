@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { Crown, ExternalLink, Loader2, X } from 'lucide-react';
+import { Crown, Loader2, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,6 @@ import {
   PRO_BULLETS,
 } from '@/lib/billing/copy';
 import { isFoundingLifetimeEnabled } from '@/lib/billing/feature-flags';
-import { openResearchCatalog } from '@/lib/billing/catalog-link';
 
 function reasonCopy(reason: SoftPaywallReason) {
   switch (reason) {
@@ -217,20 +216,6 @@ export function SoftPaywall() {
               {contextual?.dismiss ?? PAYWALL_COPY.continueFree}
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => openResearchCatalog('paywall')}
-            className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border rounded-xl px-3 py-2.5"
-          >
-            <ExternalLink size={14} />
-            <span>
-              <span className="font-medium text-foreground">{PAYWALL_COPY.browseCatalog}</span>
-              <span className="block sm:inline sm:before:content-['_·_']">
-                {PAYWALL_COPY.browseCatalogHint}
-              </span>
-            </span>
-          </button>
 
           <p className="text-[10px] leading-relaxed text-muted-foreground/90 pt-1">
             {PAYWALL_COPY.legalRow}

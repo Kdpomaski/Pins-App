@@ -3,8 +3,6 @@ import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil, FlaskConical } from
 import { format } from "date-fns";
 import { usePinsStore, InventoryItem } from "@/lib/store";
 import { useEntitlements } from "@/lib/billing/entitlement-context";
-import { openResearchCatalog } from "@/lib/billing/catalog-link";
-import { CONTEXT_COPY } from "@/lib/billing/copy";
 import { countProtocols } from "@/lib/billing/products";
 import { sortVialsForCompound } from "@/lib/inventory-vials";
 import { motion, AnimatePresence } from "framer-motion";
@@ -112,20 +110,9 @@ export default function Inventory() {
           </button>
         </header>
 
-        {data.inventory.some((v) => v.totalVolume > 0 && v.remainingVolume / v.totalVolume < 0.2) && (
-          <button
-            type="button"
-            onClick={() => openResearchCatalog("low_inventory")}
-            className="w-full text-left text-sm rounded-2xl border border-border bg-card px-4 py-3 text-muted-foreground hover:bg-muted/40 transition-colors"
-          >
-            {CONTEXT_COPY.lowInventory.body}
-            <span className="block text-primary font-medium mt-1">Research catalog (website)</span>
-          </button>
-        )}
-
         {!isPro && paywallEnabled && (
           <p className="text-xs text-muted-foreground">
-            Free includes 1 protocol and basic inventory. Extra vials and advanced tools are Pins Pro.
+            Free includes 2 protocols and basic inventory. Extra vials and advanced tools are Pins Pro.
           </p>
         )}
 

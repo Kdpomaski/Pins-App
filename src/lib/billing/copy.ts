@@ -1,17 +1,18 @@
 /**
  * Soft paywall / upgrade copy — Pins.
  * Source: /workspace/bus/drafts/2026-09-03-paywall-ui-strings.md
- * RUO-safe. No medical claims. No in-app peptide sales.
+ * No medical claims. No in-app peptide sales.
+ * Website catalog CTAs deferred (Kevin 2026-09-05).
  */
 
 export const PAYWALL_COPY = {
   headline: 'Unlock Pins Pro',
-  subhead: 'Unlimited protocols, fuller history, and exports. Basic logging stays free.',
+  subhead: 'Unlimited protocols, sync, exports, and advanced inventory. Basic logging and map history stay free.',
   reassure:
-    'You can still log doses, set reminders, use basic reconstitution, and rotate sites without upgrading.',
+    'You can still log doses, keep 2 protocols, full map history, reminders, basic reconstitution, and site rotation without upgrading.',
   ctaPrimary: 'Continue — $49.99/year',
   ctaPrimarySub: 'Best value · about $4.17/mo · cancel anytime',
-  ctaMonthly: 'Monthly — $6.99/mo',
+  ctaMonthly: 'Monthly — $4.99/mo',
   ctaLifetime: 'Lifetime — $99 once',
   ctaFounding: 'Unlock both apps — $39.99 lifetime',
   foundingBadge: 'Founding · TestFlight · Both apps',
@@ -25,20 +26,15 @@ export const PAYWALL_COPY = {
   continueFree: 'Not now',
   continueFreeAlt: 'Continue with Free',
   dismiss: 'Not now',
-  browseCatalog: 'Research catalog (website)',
-  browseCatalogHint:
-    'Browse Research Use Only materials on 220bioworx.com — not sold inside this app.',
-  noInAppSales:
-    'Research materials on 220bioworx.com are Research Use Only — not for human use — and are never sold inside this app.',
   legalRow:
     'Auto-renewing subscriptions billed by Apple or Google. Cancel anytime in your store account settings. Pins is a personal organization tool — not a medical device and not medical advice.',
   disclaimer:
-    'Pins is a personal organization tool from 220 Tech LLC. It is not a medical device and does not provide medical advice. Always consult a qualified clinician. Research materials on 220bioworx.com are Research Use Only — not for human use — and are never sold inside this app.',
+    'Pins is a personal organization tool from 220 Tech LLC. It is not a medical device and does not provide medical advice. Always consult a qualified clinician. Nothing in this app sells products or offers medical treatment.',
+  noInAppSales: 'Nothing in this app sells products or offers medical treatment.',
 } as const;
 
 export const PRO_BULLETS = [
-  'Unlimited protocols (Free includes 1)',
-  'Full map history',
+  'Unlimited protocols (Free includes 2)',
   'Photos, labs & trends',
   'Cloud sync',
   'Export / PDF',
@@ -48,7 +44,8 @@ export const PRO_BULLETS = [
 export const FREE_BULLETS = [
   'Log doses',
   'Reminders',
-  '1 protocol',
+  '2 protocols',
+  'Full map history',
   'Basic reconstitution',
   'Basic site rotation',
   'Local encrypted storage',
@@ -61,7 +58,7 @@ export const BUNDLE_COPY = {
   bullets: [
     'Pro in Pins and Pins Pets',
     'Unlimited protocols (and unlimited pets in Pets)',
-    'Full history, sync, export / PDF, advanced inventory',
+    'Sync, export / PDF, advanced inventory, photos & labs',
     'Founding price — TestFlight only',
   ] as const,
   cta: 'Unlock both apps — $39.99 lifetime',
@@ -74,15 +71,15 @@ export const BUNDLE_COPY = {
 export const CONTEXT_COPY = {
   afterFirstLog: {
     title: 'Unlock Pins Pro',
-    body: 'Unlimited protocols, fuller history, and exports. Basic logging stays free.',
+    body: 'Unlimited protocols, sync, exports, and advanced inventory. Basic logging and map history stay free.',
     cta: 'See Pro plans',
     dismiss: 'Not now',
   },
   secondProtocol: {
     title: 'Need another protocol?',
-    body: 'Free includes 1 protocol. Pins Pro unlocks unlimited protocols, history, and exports.',
+    body: 'Free includes 2 protocols. Pins Pro unlocks unlimited protocols, sync, and exports.',
     cta: 'See Pro plans',
-    dismiss: 'Keep 1 protocol',
+    dismiss: 'Keep 2 protocols',
   },
   exportLocked: {
     title: 'Export with Pins Pro',
@@ -95,8 +92,5 @@ export const CONTEXT_COPY = {
     body: 'Sync, photos, labs, trends, and advanced inventory are included with Pins Pro.',
     cta: 'Unlock Pro',
     dismiss: 'Continue with Free',
-  },
-  lowInventory: {
-    body: 'Running low in-app? Check the research catalog on our website.',
   },
 } as const;
