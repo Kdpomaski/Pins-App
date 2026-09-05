@@ -45,7 +45,7 @@ export default function Calculator() {
   const result = calculate();
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 pt-6 px-4">
+    <div className="min-h-screen bg-background text-foreground pb-nav pt-6 px-4">
       <div className="max-w-md mx-auto space-y-8">
         
         <header className="flex items-center gap-2 mb-6">

@@ -3,6 +3,12 @@ import { bodySites } from '@/lib/body-map-data';
 
 const siteIds = bodySites.map((s) => s.id) as [string, ...string[]];
 
+export const blendComponentSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  amount: z.number().positive().finite(),
+  unit: z.enum(['mg', 'mcg', '%']),
+});
+
 export const injectionLogSchema = z.object({
   id: z.string().uuid(),
   siteId: z.enum(siteIds),
@@ -11,6 +17,7 @@ export const injectionLogSchema = z.object({
   unit: z.enum(['mg', 'mcg']),
   timestamp: z.string().datetime(),
   notes: z.string().max(500).optional(),
+  blendComponents: z.array(blendComponentSchema).optional(),
   updatedAt: z.string().datetime().optional(),
   deletedAt: z.string().datetime().nullable().optional(),
 });
@@ -26,6 +33,8 @@ export const inventoryItemSchema = z.object({
   frequency: z.string().trim().max(40).optional(),
   defaultDose: z.number().positive().finite().optional(),
   reconstitutedAt: z.string().datetime().optional(),
+  isBlend: z.boolean().optional(),
+  blendComponents: z.array(blendComponentSchema).optional(),
   updatedAt: z.string().datetime().optional(),
   deletedAt: z.string().datetime().nullable().optional(),
 });
@@ -55,19 +64,33 @@ export const newInjectionLogSchema = z.object({
   unit: z.enum(['mg', 'mcg']),
   timestamp: z.string().datetime(),
   notes: z.string().max(500).optional(),
+  blendComponents: z.array(blendComponentSchema).optional(),
 });
 
-export const newInventoryItemSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  concentration: z.number().positive().finite(),
-  totalVolume: z.number().positive().finite(),
-  remainingVolume: z.number().positive().finite(),
-  unit: z.enum(['mg', 'mcg']),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  frequency: z.string().trim().max(40).optional(),
-  defaultDose: z.number().positive().finite().optional(),
-  reconstitutedAt: z.string().datetime().optional(),
-});
+export const newInventoryItemSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    concentration: z.number().positive().finite(),
+    totalVolume: z.number().positive().finite(),
+    remainingVolume: z.number().positive().finite(),
+    unit: z.enum(['mg', 'mcg']),
+    color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    frequency: z.string().trim().max(40).optional(),
+    defaultDose: z.number().positive().finite().optional(),
+    reconstitutedAt: z.string().datetime().optional(),
+    isBlend: z.boolean().optional(),
+    blendComponents: z.array(blendComponentSchema).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (!value.isBlend) return;
+    if (!value.blendComponents || value.blendComponents.length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A blend needs at least two components.',
+        path: ['blendComponents'],
+      });
+    }
+  });
 
 export type NewInjectionLog = z.infer<typeof newInjectionLogSchema>;
 export type NewInventoryItem = z.infer<typeof newInventoryItemSchema>;

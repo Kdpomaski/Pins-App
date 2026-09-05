@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
+import { formatBlendBreakdown, parseBlendComponents, type BlendAmountUnit } from "@/lib/blend";
 import { usePinsStore, InventoryItem } from "@/lib/store";
+import { useEntitlements } from "@/lib/billing/entitlement-context";
+import { countProtocols } from "@/lib/billing/products";
 import { sortVialsForCompound } from "@/lib/inventory-vials";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -40,6 +43,7 @@ function formatReconstitutedDate(iso?: string) {
 
 export default function Inventory() {
   const { data, addInventoryItem, deleteInventoryItem } = usePinsStore();
+  const { requirePro, protocolCountFromData, isPro, paywallEnabled } = useEntitlements();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<InventoryItem | null>(null);
 
@@ -47,6 +51,24 @@ export default function Inventory() {
     () => groupInventoryByCompound(data.inventory),
     [data.inventory],
   );
+
+  const openAddModal = () => {
+    // Adding a net-new compound beyond free protocol limit → soft Pro prompt.
+    const protocols = Math.max(
+      protocolCountFromData(data),
+      compoundGroups.length,
+      countProtocols(data.schedule),
+    );
+    // Allow opening the modal; AddInventoryModal enforces on save for new compounds.
+    void protocols;
+    setIsAddModalOpen(true);
+  };
+
+  const handleAddVialToCompoundGated = (template: InventoryItem) => {
+    // Extra vials for a compound = advanced inventory (Pro).
+    if (!requirePro("advanced_inventory", { reason: "generic_pro" })) return;
+    handleAddVialToCompound(template);
+  };
 
   const pendingScheduleCount = pendingDelete
     ? data.schedule.filter((dose) => dose.compound === pendingDelete.name).length
@@ -72,29 +94,37 @@ export default function Inventory() {
       color: template.color,
       frequency: template.frequency,
       defaultDose: template.defaultDose,
+      isBlend: template.isBlend,
+      blendComponents: template.blendComponents,
     });
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 pt-6 px-4">
+    <div className="min-h-screen bg-background text-foreground pb-nav pt-6 px-4">
       <div className="max-w-md mx-auto space-y-6">
 
         <header className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
           <button
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={openAddModal}
             className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary/20 transition-colors"
           >
             <Plus size={20} />
           </button>
         </header>
 
+        {!isPro && paywallEnabled && (
+          <p className="text-xs text-muted-foreground">
+            Free includes 2 protocols and basic inventory. Extra vials and advanced tools are Pins Pro.
+          </p>
+        )}
+
         <div className="grid gap-4">
           {data.inventory.length === 0 ? (
             <div className="text-center p-8 bg-card rounded-2xl border border-border mt-4">
               <Droplet size={40} className="mx-auto text-muted-foreground mb-4 opacity-50" />
               <p className="text-muted-foreground">Your inventory is empty.</p>
-              <button onClick={() => setIsAddModalOpen(true)} className="mt-4 text-primary font-medium">
+              <button onClick={openAddModal} className="mt-4 text-primary font-medium">
                 Add your first vial
               </button>
             </div>
@@ -103,7 +133,7 @@ export default function Inventory() {
               <CompoundGroupCard
                 key={name}
                 vials={vials}
-                onAddVial={() => handleAddVialToCompound(vials[0])}
+                onAddVial={() => handleAddVialToCompoundGated(vials[0])}
                 onDeleteVial={setPendingDelete}
               />
             ))
@@ -287,6 +317,11 @@ function VialCard({
               {showCompoundHeader ? (
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold text-lg">{item.name}</h3>
+                  {item.isBlend && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/10 border border-primary/30 rounded-full px-2 py-0.5">
+                      Blend
+                    </span>
+                  )}
                   <span className="text-sm font-mono text-muted-foreground bg-background/60 border border-border rounded-full px-2.5 py-0.5">
                     {compoundCount}
                   </span>
@@ -306,6 +341,11 @@ function VialCard({
               <p className="text-xs text-muted-foreground mt-0.5">
                 {item.concentration} {item.unit}/ml
               </p>
+              {item.isBlend && item.blendComponents?.length ? (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatBlendBreakdown(item.blendComponents)}
+                </p>
+              ) : null}
               {reconstitutedLabel ? (
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Reconstituted {reconstitutedLabel}
@@ -510,6 +550,7 @@ function AddInventoryModal({
   onAdd: (item: Omit<InventoryItem, "id" | "updatedAt">) => { ok: true } | { ok: false; error: string };
 }) {
   const { data } = usePinsStore();
+  const { requirePro, protocolCountFromData } = useEntitlements();
   const [name, setName] = useState("");
   const [concentration, setConcentration] = useState("");
   const [totalVolume, setTotalVolume] = useState("");
@@ -518,6 +559,13 @@ function AddInventoryModal({
   const [frequency, setFrequency] = useState("");
   const [defaultDose, setDefaultDose] = useState("");
   const [showFreqPicker, setShowFreqPicker] = useState(false);
+  const [isBlend, setIsBlend] = useState(false);
+  const [blendRows, setBlendRows] = useState<
+    { key: string; name: string; amount: string; unit: BlendAmountUnit }[]
+  >([
+    { key: crypto.randomUUID(), name: "", amount: "", unit: "mg" },
+    { key: crypto.randomUUID(), name: "", amount: "", unit: "mg" },
+  ]);
   const [error, setError] = useState("");
 
   const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
@@ -546,6 +594,31 @@ function AddInventoryModal({
       (v) => v.name.toLowerCase() === trimmedName.toLowerCase(),
     );
 
+    if (isNewCompound) {
+      const protocolCount = Math.max(
+        protocolCountFromData(data),
+        new Set(data.inventory.map((v) => v.name.toLowerCase())).size,
+      );
+      if (!requirePro("protocols", { protocolCount, reason: "second_protocol" })) {
+        return;
+      }
+    } else {
+      // Additional vial of existing compound = advanced inventory.
+      if (!requirePro("advanced_inventory", { reason: "generic_pro" })) {
+        return;
+      }
+    }
+
+    let blendPayload: { isBlend: true; blendComponents: NonNullable<InventoryItem["blendComponents"]> } | undefined;
+    if (isBlend) {
+      const parsedBlend = parseBlendComponents(blendRows);
+      if (!parsedBlend.ok) {
+        setError(parsedBlend.error);
+        return;
+      }
+      blendPayload = { isBlend: true, blendComponents: parsedBlend.components };
+    }
+
     const result = onAdd({
       name: trimmedName,
       concentration: conc,
@@ -556,6 +629,7 @@ function AddInventoryModal({
       frequency: frequency.trim() || undefined,
       defaultDose: doseVal,
       reconstitutedAt: isNewCompound ? new Date().toISOString() : undefined,
+      ...blendPayload,
     });
 
     if (!result.ok) {
@@ -587,15 +661,102 @@ function AddInventoryModal({
 
         <div className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Compound Name</label>
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              {isBlend ? "Blend name" : "Compound Name"}
+            </label>
             <input
               type="text"
-              placeholder="e.g. BPC-157"
+              placeholder={isBlend ? "e.g. Glow" : "e.g. EXAMPLE"}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full bg-input/50 border border-border rounded-lg p-3 text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
             />
           </div>
+
+          <label className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isBlend}
+              onChange={(e) => setIsBlend(e.target.checked)}
+              className="mt-1 h-4 w-4 accent-primary"
+            />
+            <span>
+              <span className="block text-sm font-medium text-foreground">This vial is a blend</span>
+              <span className="block text-xs text-muted-foreground mt-0.5">
+                List each component for your records. Amounts can be mg, mcg, or %.
+              </span>
+            </span>
+          </label>
+
+          {isBlend && (
+            <div className="space-y-3 rounded-xl border border-border p-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Components</p>
+              {blendRows.map((row, index) => (
+                <div key={row.key} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder={`Component ${index + 1}`}
+                    value={row.name}
+                    onChange={(e) =>
+                      setBlendRows((rows) =>
+                        rows.map((r) => (r.key === row.key ? { ...r, name: e.target.value } : r)),
+                      )
+                    }
+                    className="flex-1 min-w-0 bg-input/50 border border-border rounded-lg p-2.5 text-sm text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0"
+                    value={row.amount}
+                    onChange={(e) =>
+                      setBlendRows((rows) =>
+                        rows.map((r) => (r.key === row.key ? { ...r, amount: e.target.value } : r)),
+                      )
+                    }
+                    className="w-16 bg-input/50 border border-border rounded-lg p-2.5 text-sm text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+                  />
+                  <select
+                    value={row.unit}
+                    onChange={(e) =>
+                      setBlendRows((rows) =>
+                        rows.map((r) =>
+                          r.key === row.key ? { ...r, unit: e.target.value as BlendAmountUnit } : r,
+                        ),
+                      )
+                    }
+                    className="bg-secondary border border-border rounded-lg px-1.5 py-2.5 text-xs text-muted-foreground outline-none"
+                  >
+                    <option value="mg">mg</option>
+                    <option value="mcg">mcg</option>
+                    <option value="%">%</option>
+                  </select>
+                  {blendRows.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setBlendRows((rows) => rows.filter((r) => r.key !== row.key))}
+                      className="p-1 text-muted-foreground hover:text-destructive"
+                      aria-label="Remove component"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setBlendRows((rows) => [
+                    ...rows,
+                    { key: crypto.randomUUID(), name: "", amount: "", unit: "mg" },
+                  ])
+                }
+                className="text-xs font-medium text-primary"
+              >
+                + Add component
+              </button>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

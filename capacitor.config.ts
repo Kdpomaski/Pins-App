@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.two20tech.pins',
-  appName: 'Pins',
+  appName: 'Pins by 220 Tech',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

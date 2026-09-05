@@ -52,10 +52,10 @@ export function deductVolumeFromCompound(
   return removeDepletedVials(updated);
 }
 
-export function scheduleForRemainingInventory(
-  schedule: { compound: string }[],
+export function scheduleForRemainingInventory<T extends { compound: string }>(
+  schedule: T[],
   inventory: InventoryItem[],
-) {
+): T[] {
   const compounds = new Set(inventory.map((v) => v.name));
   return schedule.filter((dose) => compounds.has(dose.compound));
 }

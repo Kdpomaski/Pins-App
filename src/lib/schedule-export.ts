@@ -9,6 +9,10 @@ import {
   setMinutes,
   startOfDay,
 } from 'date-fns';
+import { Capacitor } from '@capacitor/core';
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { formatBlendBreakdown, resolveBlendComponents } from '@/lib/blend';
 import type { InjectionLog, InventoryItem, PinsData } from '@/lib/store';
 
 export type ExportFormat = 'calendar' | 'text';
@@ -30,6 +34,29 @@ function downloadBlob(content: string, filename: string, mime: string) {
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+/** Write + share via Capacitor on native; anchor download on web. */
+async function deliverExport(content: string, filename: string, mime: string): Promise<void> {
+  if (!Capacitor.isNativePlatform()) {
+    downloadBlob(content, filename, mime);
+    return;
+  }
+
+  const written = await Filesystem.writeFile({
+    path: filename,
+    data: content,
+    directory: Directory.Cache,
+    encoding: Encoding.UTF8,
+    recursive: true,
+  });
+
+  await Share.share({
+    title: filename,
+    text: filename,
+    url: written.uri,
+    dialogTitle: 'Export schedule',
+  });
 }
 
 function applyTime(date: Date, time: string): Date {
@@ -172,6 +199,18 @@ function icsDate(date: Date): string {
   return format(date, "yyyyMMdd'T'HHmmss");
 }
 
+function icsBlendDescription(
+  compound: string,
+  dose: number,
+  unit: 'mg' | 'mcg',
+  data: PinsData,
+): string {
+  const item = data.inventory.find((i) => i.name === compound);
+  const breakdown = formatBlendBreakdown(item?.blendComponents);
+  const blend = breakdown ? ` Blend ${compound}: ${breakdown}.` : '';
+  return `Scheduled ${compound} (${dose} ${unit}).${blend} Personal record only.`;
+}
+
 export function buildIcsCalendar(compounds: string[], data: PinsData, options: ExportOptions): string {
   const doses = buildFutureDoses(compounds, data, {
     start: options.range.from,
@@ -194,7 +233,7 @@ export function buildIcsCalendar(compounds: string[], data: PinsData, options: E
       `DTSTART:${icsDate(dose.at)}`,
       `DTEND:${icsDate(end)}`,
       `SUMMARY:${dose.compound} - ${dose.dose} ${dose.unit}`,
-      `DESCRIPTION:Scheduled dose of ${dose.compound} (${dose.dose} ${dose.unit}). Import into Google or Apple Calendar.`,
+      `DESCRIPTION:${icsBlendDescription(dose.compound, dose.dose, dose.unit, data)}`,
       'END:VEVENT',
     );
   });
@@ -222,25 +261,27 @@ export function buildAdministrationText(compounds: string[], data: PinsData, opt
   const body = logs.map((log: InjectionLog) => {
     const when = format(new Date(log.timestamp), 'yyyy-MM-dd HH:mm');
     const site = log.siteId.replace(/-/g, ' ');
-    return `${when} | ${log.compound} | ${log.dose} ${log.unit} | Site: ${site}${log.notes ? ` | Notes: ${log.notes}` : ''}`;
+    const blend = formatBlendBreakdown(resolveBlendComponents(log, data.inventory));
+    const name = blend ? `${log.compound} [${blend}]` : log.compound;
+    return `${when} | ${name} | ${log.dose} ${log.unit} | Site: ${site}${log.notes ? ` | Notes: ${log.notes}` : ''}`;
   });
 
   return [...header, ...body].join('\n');
 }
 
-export function exportSchedule(
+export async function exportSchedule(
   formatType: ExportFormat,
   compounds: string[],
   data: PinsData,
   options: ExportOptions,
-) {
+): Promise<void> {
   if (compounds.length === 0) return;
 
   const fromStamp = format(options.range.from, 'yyyy-MM-dd');
   const toStamp = format(options.range.to, 'yyyy-MM-dd');
 
   if (formatType === 'calendar') {
-    downloadBlob(
+    await deliverExport(
       buildIcsCalendar(compounds, data, options),
       `pins-schedule-${fromStamp}-to-${toStamp}.ics`,
       'text/calendar;charset=utf-8',
@@ -248,7 +289,7 @@ export function exportSchedule(
     return;
   }
 
-  downloadBlob(
+  await deliverExport(
     buildAdministrationText(compounds, data, options),
     `pins-admin-log-${fromStamp}-to-${toStamp}.txt`,
     'text/plain;charset=utf-8',
