@@ -31,7 +31,10 @@ export function BottomNav({ onOpenLogModal }: { onOpenLogModal: () => void }) {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t-2 border-border shadow-[0_-2px_8px_rgba(75,83,32,0.08)] pb-safe">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t-2 border-border shadow-[0_-2px_8px_rgba(75,83,32,0.08)] pb-safe"
+      style={{ paddingBottom: 'var(--pins-safe-bottom, env(safe-area-inset-bottom, 0px))' }}
+    >
       <div className="flex items-center justify-between h-[4.5rem] w-full max-w-md mx-auto px-1">
         <button
           data-testid="button-open-log-modal"

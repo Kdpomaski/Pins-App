@@ -8,12 +8,18 @@ import './index.css';
 
 assertNoTelemetry();
 
-// Native WebView often reports 0 for env(safe-area-inset-top) until layout settles.
-// Keep at least a status-bar-sized inset so titles are not trapped under the island.
+// Native WebView often reports 0 for env(safe-area-inset-*) until layout settles.
+// Keep minimum insets so chrome is not trapped under status / gesture bars.
 if (Capacitor.isNativePlatform()) {
   document.documentElement.style.setProperty(
     '--pins-safe-top',
     'max(env(safe-area-inset-top, 0px), 47px)',
+  );
+  // Android gesture / 3-button nav: keep BottomNav above the system bar ("too low" fix).
+  const minBottom = Capacitor.getPlatform() === 'android' ? '24px' : '0px';
+  document.documentElement.style.setProperty(
+    '--pins-safe-bottom',
+    `max(env(safe-area-inset-bottom, 0px), ${minBottom})`,
   );
 }
 

@@ -3,6 +3,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { useState } from 'react';
+import { useAndroidBackButton } from '@/hooks/use-android-back-button';
 
 import Dashboard from '@/pages/Dashboard';
 import BodyMap from '@/pages/BodyMap';
@@ -122,6 +123,8 @@ function AppRoutes() {
 }
 
 function App() {
+  useAndroidBackButton();
+
   return (
     <TooltipProvider>
       <AuthProvider>

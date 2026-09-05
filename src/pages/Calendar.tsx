@@ -9,12 +9,13 @@ import { useBilling } from "@/lib/billing/billing-context";
 
 export default function CalendarView() {
   const { data } = usePinsStore();
-  const { requirePro } = useBilling();
+  const { requirePro, paywallEnabled } = useBilling();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [exportOpen, setExportOpen] = useState(false);
 
   const handleExportClick = () => {
-    if (!requirePro("export_pdf", { reason: "export_locked" })) return;
+    // SoftPaywall OFF → free .ics + text export (no Pro gate).
+    if (paywallEnabled && !requirePro("export_pdf", { reason: "export_locked" })) return;
     setExportOpen(true);
   };
 
@@ -26,7 +27,7 @@ export default function CalendarView() {
   const today = () => setCurrentDate(new Date());
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 pt-6 px-4 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground pb-nav pt-6 px-4 flex flex-col">
       <div className="max-w-md mx-auto w-full flex-1">
 
         <header className="flex justify-between items-center mb-8">

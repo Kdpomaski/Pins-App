@@ -13,6 +13,7 @@ import {
   type ExportRange,
 } from '@/lib/schedule-export';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -45,6 +46,8 @@ function defaultRange(formatType: ExportFormat): ExportRange {
 
 export function ScheduleExportModal({ open, onClose }: Props) {
   const { data } = usePinsStore();
+  const { toast } = useToast();
+  const [exporting, setExporting] = useState(false);
   const compounds = useMemo(() => allCompoundNames(data), [data]);
   const [formatType, setFormatType] = useState<ExportFormat>('calendar');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -112,10 +115,22 @@ export function ScheduleExportModal({ open, onClose }: Props) {
   ];
   const presets = formatType === 'calendar' ? calendarPresets : logPresets;
 
-  const handleExport = () => {
-    if (!rangeValid || selectedList.length === 0) return;
-    exportSchedule(formatType, selectedList, data, { range });
-    onClose();
+  const handleExport = async () => {
+    if (!rangeValid || selectedList.length === 0 || exporting) return;
+    setExporting(true);
+    try {
+      await exportSchedule(formatType, selectedList, data, { range });
+      onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Export failed';
+      toast({
+        title: 'Export failed',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -285,11 +300,13 @@ export function ScheduleExportModal({ open, onClose }: Props) {
 
           <Button
             className="w-full"
-            disabled={selectedList.length === 0 || !rangeValid || itemCount === 0}
-            onClick={handleExport}
+            disabled={selectedList.length === 0 || !rangeValid || itemCount === 0 || exporting}
+            onClick={() => void handleExport()}
           >
             <Download size={18} className="mr-2" />
-            Export {rangeValid && itemCount > 0 ? `(${itemCount})` : ''}
+            {exporting
+              ? 'Exporting…'
+              : `Export ${rangeValid && itemCount > 0 ? `(${itemCount})` : ''}`.trim()}
           </Button>
         </div>
       </DialogContent>

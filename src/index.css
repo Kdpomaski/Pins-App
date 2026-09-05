@@ -104,6 +104,11 @@ body {
   padding-bottom: var(--pins-safe-bottom);
 }
 
+/* Content clearance above BottomNav (4.5rem) + system bottom inset */
+@utility pb-nav {
+  padding-bottom: calc(6rem + var(--pins-safe-bottom));
+}
+
 @layer base {
   * {
     @apply border-border;

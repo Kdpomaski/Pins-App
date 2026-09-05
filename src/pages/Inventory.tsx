@@ -100,7 +100,7 @@ export default function Inventory() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 pt-6 px-4">
+    <div className="min-h-screen bg-background text-foreground pb-nav pt-6 px-4">
       <div className="max-w-md mx-auto space-y-6">
 
         <header className="flex justify-between items-center">

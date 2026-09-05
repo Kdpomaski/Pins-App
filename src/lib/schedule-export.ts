@@ -9,6 +9,9 @@ import {
   setMinutes,
   startOfDay,
 } from 'date-fns';
+import { Capacitor } from '@capacitor/core';
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { formatBlendBreakdown, resolveBlendComponents } from '@/lib/blend';
 import type { InjectionLog, InventoryItem, PinsData } from '@/lib/store';
 
@@ -31,6 +34,29 @@ function downloadBlob(content: string, filename: string, mime: string) {
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+/** Write + share via Capacitor on native; anchor download on web. */
+async function deliverExport(content: string, filename: string, mime: string): Promise<void> {
+  if (!Capacitor.isNativePlatform()) {
+    downloadBlob(content, filename, mime);
+    return;
+  }
+
+  const written = await Filesystem.writeFile({
+    path: filename,
+    data: content,
+    directory: Directory.Cache,
+    encoding: Encoding.UTF8,
+    recursive: true,
+  });
+
+  await Share.share({
+    title: filename,
+    text: filename,
+    url: written.uri,
+    dialogTitle: 'Export schedule',
+  });
 }
 
 function applyTime(date: Date, time: string): Date {
@@ -243,19 +269,19 @@ export function buildAdministrationText(compounds: string[], data: PinsData, opt
   return [...header, ...body].join('\n');
 }
 
-export function exportSchedule(
+export async function exportSchedule(
   formatType: ExportFormat,
   compounds: string[],
   data: PinsData,
   options: ExportOptions,
-) {
+): Promise<void> {
   if (compounds.length === 0) return;
 
   const fromStamp = format(options.range.from, 'yyyy-MM-dd');
   const toStamp = format(options.range.to, 'yyyy-MM-dd');
 
   if (formatType === 'calendar') {
-    downloadBlob(
+    await deliverExport(
       buildIcsCalendar(compounds, data, options),
       `pins-schedule-${fromStamp}-to-${toStamp}.ics`,
       'text/calendar;charset=utf-8',
@@ -263,7 +289,7 @@ export function exportSchedule(
     return;
   }
 
-  downloadBlob(
+  await deliverExport(
     buildAdministrationText(compounds, data, options),
     `pins-admin-log-${fromStamp}-to-${toStamp}.txt`,
     'text/plain;charset=utf-8',
