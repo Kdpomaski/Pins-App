@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
 import { formatBlendBreakdown, parseBlendComponents, type BlendAmountUnit } from "@/lib/blend";
+import { ProtocolChips } from "@/components/ProtocolChips";
 import { usePinsStore, InventoryItem } from "@/lib/store";
 import { useEntitlements } from "@/lib/billing/entitlement-context";
 import { countProtocols } from "@/lib/billing/products";
+import { doseVolumeMl } from "@/lib/dose-volume";
 import { sortVialsForCompound } from "@/lib/inventory-vials";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -268,6 +270,12 @@ function VialCard({
   const percent = Math.max(0, Math.min(100, (item.remainingVolume / item.totalVolume) * 100));
   const isLow = percent < 20;
   const reconstitutedLabel = formatReconstitutedDate(item.reconstitutedAt);
+  const protocolVolume = doseVolumeMl({
+    dose: item.defaultDose,
+    doseUnit: item.unit,
+    concentration: item.concentration,
+    concentrationUnit: item.unit,
+  });
 
   const saveFreq = () => {
     updateInventory(item.id, { frequency: freqDraft.trim() || undefined });
@@ -410,19 +418,14 @@ function VialCard({
           </div>
         </div>
 
-        {!protocolExpanded && (item.frequency || item.defaultDose != null) && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 relative z-10">
-            {item.frequency && (
-              <span className="text-xs text-muted-foreground bg-background/60 border border-border rounded-full px-3 py-1">
-                {item.frequency}
-              </span>
-            )}
-            {item.defaultDose != null && (
-              <span className="text-xs text-muted-foreground bg-background/60 border border-border rounded-full px-3 py-1">
-                {item.defaultDose} {item.unit}/dose
-              </span>
-            )}
-          </div>
+        {!protocolExpanded && (
+          <ProtocolChips
+            frequency={item.frequency}
+            dose={item.defaultDose}
+            doseUnit={item.unit}
+            concentration={item.concentration}
+            concentrationUnit={item.unit}
+          />
         )}
 
         {chevronExpandsExtraVials && !extraVialsExpanded && compoundCount > 1 && (
@@ -533,6 +536,11 @@ function VialCard({
                       : <span className="text-muted-foreground italic">Not set</span>}
                   </p>
                 )}
+                {protocolVolume && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {protocolVolume.label} from concentration
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -569,6 +577,12 @@ function AddInventoryModal({
   const [error, setError] = useState("");
 
   const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
+  const draftVolume = doseVolumeMl({
+    dose: defaultDose ? Number(defaultDose) : undefined,
+    doseUnit: unit,
+    concentration: concentration ? Number(concentration) : undefined,
+    concentrationUnit: unit,
+  });
 
   const handleSave = () => {
     if (!name || !concentration || !totalVolume) {
@@ -847,6 +861,11 @@ function AddInventoryModal({
                 />
                 <span className="text-sm text-muted-foreground font-medium">{unit}</span>
               </div>
+              {draftVolume && (
+                <p className="text-xs text-muted-foreground">
+                  {draftVolume.label} from concentration
+                </p>
+              )}
             </div>
           </div>
 

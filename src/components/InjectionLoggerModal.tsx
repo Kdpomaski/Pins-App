@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, MapPin, Clock } from "lucide-react";
 import { formatBlendBreakdown } from "@/lib/blend";
+import { doseVolumeMl } from "@/lib/dose-volume";
 import { usePinsStore } from "@/lib/store";
 import { useBilling } from "@/lib/billing/billing-context";
 import { bodySites, siteLabel } from "@/lib/body-map-data";
@@ -150,6 +151,14 @@ export function InjectionLoggerModal({
 
   const canSave = Boolean(siteId && compound && dose);
 
+  const selectedItem = data.inventory.find((item) => item.name === compound);
+  const drawnVolume = doseVolumeMl({
+    dose: dose ? Number(dose) : undefined,
+    doseUnit: unit,
+    concentration: selectedItem?.concentration,
+    concentrationUnit: selectedItem?.unit ?? unit,
+  });
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -277,6 +286,20 @@ export function InjectionLoggerModal({
                       {unit}
                     </span>
                   </div>
+                  {(selectedItem?.frequency || drawnVolume) && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {selectedItem?.frequency ? (
+                        <span className="text-xs text-muted-foreground bg-background/60 border border-border rounded-full px-3 py-1">
+                          {selectedItem.frequency}
+                        </span>
+                      ) : null}
+                      {drawnVolume ? (
+                        <span className="text-xs text-muted-foreground bg-background/60 border border-border rounded-full px-3 py-1">
+                          {drawnVolume.label}
+                        </span>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
 
                 <div>

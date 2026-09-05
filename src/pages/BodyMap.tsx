@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ProtocolChips } from '@/components/ProtocolChips';
 import { usePinsStore, type InventoryItem } from '@/lib/store';
 
 interface InjectionLog {
@@ -174,6 +175,16 @@ const BodyMap: React.FC<{
             </div>
             {data.inventory.length === 0 && (
               <p className="text-xs text-muted-foreground mt-2">Add vials in Inventory to filter by compound.</p>
+            )}
+            {selectedCompound && (
+              <ProtocolChips
+                frequency={selectedCompound.frequency}
+                dose={selectedCompound.defaultDose}
+                doseUnit={selectedCompound.unit}
+                concentration={selectedCompound.concentration}
+                concentrationUnit={selectedCompound.unit}
+                className="mt-3 flex flex-wrap items-center gap-2"
+              />
             )}
           </aside>
 
