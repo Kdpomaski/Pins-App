@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import type { BlendComponent } from '@/lib/blend';
 import { DEFAULT_DATA } from '@/lib/default-data';
 import { getDeviceId } from '@/lib/device';
 import {
@@ -31,6 +32,7 @@ export type InjectionLog = {
   unit: 'mg' | 'mcg';
   timestamp: string;
   notes?: string;
+  blendComponents?: BlendComponent[];
   updatedAt?: string;
   deletedAt?: string | null;
 };
@@ -46,6 +48,8 @@ export type InventoryItem = {
   frequency?: string;
   defaultDose?: number;
   reconstitutedAt?: string;
+  isBlend?: boolean;
+  blendComponents?: BlendComponent[];
   updatedAt?: string;
   deletedAt?: string | null;
 };
@@ -156,7 +160,7 @@ export function PinsProvider({ children }: { children: ReactNode }) {
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         ),
         inventory,
-        schedule: scheduleForRemainingInventory(prev.schedule, inventory),
+        schedule: scheduleForRemainingInventory<ScheduledDose>(prev.schedule, inventory),
       };
     });
 

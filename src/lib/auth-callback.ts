@@ -1,8 +1,8 @@
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
-function readAuthParams() {
-  const url = new URL(window.location.href);
+function readAuthParams(href?: string) {
+  const url = new URL(href ?? window.location.href);
   const query = url.searchParams;
   const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
 
@@ -15,13 +15,13 @@ function readAuthParams() {
   };
 }
 
-export function hasAuthCallbackParams(): boolean {
-  const { code, tokenHash, accessToken, error } = readAuthParams();
+export function hasAuthCallbackParams(href?: string): boolean {
+  const { code, tokenHash, accessToken, error } = readAuthParams(href);
   return Boolean(code || tokenHash || accessToken || error);
 }
 
-export async function completeAuthFromUrl(): Promise<{ error?: string }> {
-  const { code, tokenHash, type, error } = readAuthParams();
+export async function completeAuthFromUrl(href?: string): Promise<{ error?: string }> {
+  const { code, tokenHash, type, error } = readAuthParams(href);
 
   if (error) {
     return { error: decodeURIComponent(error.replace(/\+/g, ' ')) };

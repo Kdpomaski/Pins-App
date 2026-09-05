@@ -37,3 +37,34 @@ create policy "Users can update own profile"
 
 grant select, insert, update on table public.profiles to authenticated;
 grant select on table public.profiles to service_role;
+
+-- Pins Pro / Bundle entitlements (stub) — shared with Pins Pets via signed-in account.
+create table if not exists public.user_entitlements (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  is_pro boolean not null default false,
+  plan text not null default 'none',
+  product_id text,
+  source_app text not null default 'pins' check (source_app in ('pins', 'pinspets', 'bundle')),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.user_entitlements enable row level security;
+
+drop policy if exists "Users can read own entitlement" on public.user_entitlements;
+drop policy if exists "Users can upsert own entitlement" on public.user_entitlements;
+drop policy if exists "Users can update own entitlement" on public.user_entitlements;
+
+create policy "Users can read own entitlement"
+  on public.user_entitlements for select to authenticated
+  using (auth.uid() = user_id);
+
+create policy "Users can upsert own entitlement"
+  on public.user_entitlements for insert to authenticated
+  with check (auth.uid() = user_id);
+
+create policy "Users can update own entitlement"
+  on public.user_entitlements for update to authenticated
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+grant select, insert, update on table public.user_entitlements to authenticated;
+grant select on table public.user_entitlements to service_role;

@@ -2,7 +2,10 @@ import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, MapPin, Clock } from "lucide-react";
+import { formatBlendBreakdown } from "@/lib/blend";
+import { doseVolumeMl } from "@/lib/dose-volume";
 import { usePinsStore } from "@/lib/store";
+import { useBilling } from "@/lib/billing/billing-context";
 import { bodySites, siteLabel } from "@/lib/body-map-data";
 import type { InventoryItem } from "@/lib/store";
 
@@ -42,6 +45,7 @@ export function InjectionLoggerModal({
   defaultCompoundName,
 }: InjectionLoggerModalProps) {
   const { data, addLog } = usePinsStore();
+  const { maybeShowSoftPaywallAfterFirstLog } = useBilling();
 
   const compoundOptions = useMemo(
     () => compoundsByUsage(data.inventory, data.logs),
@@ -120,6 +124,10 @@ export function InjectionLoggerModal({
       return;
     }
 
+    // Soft paywall AFTER first real dose — never blocks basic logging.
+    const priorLogCount = data.logs.filter((l) => !l.deletedAt).length;
+
+    const inventoryItem = data.inventory.find((i) => i.name === compound);
     const result = addLog({
       siteId,
       compound,
@@ -127,6 +135,9 @@ export function InjectionLoggerModal({
       unit,
       timestamp: new Date().toISOString(),
       notes: notes.trim() || undefined,
+      ...(inventoryItem?.isBlend && inventoryItem.blendComponents?.length
+        ? { blendComponents: inventoryItem.blendComponents }
+        : {}),
     });
 
     if (!result.ok) {
@@ -134,10 +145,19 @@ export function InjectionLoggerModal({
       return;
     }
 
+    maybeShowSoftPaywallAfterFirstLog(priorLogCount);
     onClose();
   };
 
   const canSave = Boolean(siteId && compound && dose);
+
+  const selectedItem = data.inventory.find((item) => item.name === compound);
+  const drawnVolume = doseVolumeMl({
+    dose: dose ? Number(dose) : undefined,
+    doseUnit: unit,
+    concentration: selectedItem?.concentration,
+    concentrationUnit: selectedItem?.unit ?? unit,
+  });
 
   return (
     <AnimatePresence>
@@ -234,10 +254,19 @@ export function InjectionLoggerModal({
                   >
                     {compoundOptions.map((item) => (
                       <option key={item.name} value={item.name}>
-                        {item.name}
+                        {item.isBlend ? `${item.name} (blend)` : item.name}
                       </option>
                     ))}
                   </select>
+                  {(() => {
+                    const selected = compoundOptions.find((item) => item.name === compound);
+                    const breakdown = selected?.isBlend
+                      ? formatBlendBreakdown(selected.blendComponents)
+                      : "";
+                    return breakdown ? (
+                      <p className="text-xs text-muted-foreground mt-2">{breakdown}</p>
+                    ) : null;
+                  })()}
                 </div>
 
                 <div>
@@ -257,6 +286,20 @@ export function InjectionLoggerModal({
                       {unit}
                     </span>
                   </div>
+                  {(selectedItem?.frequency || drawnVolume) && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {selectedItem?.frequency ? (
+                        <span className="text-xs text-muted-foreground bg-background/60 border border-border rounded-full px-3 py-1">
+                          {selectedItem.frequency}
+                        </span>
+                      ) : null}
+                      {drawnVolume ? (
+                        <span className="text-xs text-muted-foreground bg-background/60 border border-border rounded-full px-3 py-1">
+                          {drawnVolume.label}
+                        </span>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
 
                 <div>

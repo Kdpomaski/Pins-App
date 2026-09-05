@@ -1,4 +1,7 @@
 import type { PinsData } from '@/lib/store';
+import { canAccessFeature } from '@/lib/billing/products';
+import { isProUser } from '@/lib/billing/entitlements';
+import { isPaywallEnabled } from '@/lib/billing/feature-flags';
 
 /** Schema version for forward-compatible local + future sync migrations. */
 export const SCHEMA_VERSION = 1;
@@ -28,12 +31,18 @@ export interface SyncAdapter {
   pull(since: string | null): Promise<E2ESyncPayload[]>;
 }
 
-/** No-op adapter until E2E sync backend exists. */
+/** No-op adapter until E2E sync backend exists. Cloud sync is a Pro capability. */
 export const syncAdapter: SyncAdapter = {
   async push() {
+    if (isPaywallEnabled() && !canAccessFeature('cloud_sync', { isPro: isProUser() }).allowed) {
+      return { ok: false, error: 'Cloud sync is a Pins Pro feature.' };
+    }
     return { ok: false, error: 'E2E sync not configured — local-first only.' };
   },
   async pull() {
+    if (isPaywallEnabled() && !canAccessFeature('cloud_sync', { isPro: isProUser() }).allowed) {
+      return [];
+    }
     return [];
   },
 };

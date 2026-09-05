@@ -3,6 +3,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { useState } from 'react';
+import { useAndroidBackButton } from '@/hooks/use-android-back-button';
 
 import Dashboard from '@/pages/Dashboard';
 import BodyMap from '@/pages/BodyMap';
@@ -18,6 +19,10 @@ import AuthCallback from '@/pages/AuthCallback';
 import { AuthProvider } from '@/lib/auth-context';
 import { PinsProvider, usePinsStore } from '@/lib/store';
 import { SecurityProvider } from '@/lib/security-context';
+import { EntitlementProvider, useEntitlements } from '@/lib/billing/entitlement-context';
+import { SoftPaywall } from '@/components/SoftPaywall';
+import { filterMapHistoryLogs } from '@/lib/billing/products';
+import { isPaywallEnabled } from '@/lib/billing/feature-flags';
 
 function BodyMapRoute({
   handleOpenLogger,
@@ -25,7 +30,8 @@ function BodyMapRoute({
   handleOpenLogger: (siteId?: string, compoundName?: string) => void;
 }) {
   const { data } = usePinsStore();
-  const logs = data.logs.map((log) => ({
+  const { isPro } = useEntitlements();
+  const mapped = data.logs.map((log) => ({
     id: log.id,
     siteId: log.siteId,
     region: log.siteId.replace(/-/g, ' '),
@@ -33,6 +39,11 @@ function BodyMapRoute({
     dose: log.dose,
     time: log.timestamp,
   }));
+  // Full map history is Free (Kevin 2026-09-05) — filter is a no-op.
+  const logs = filterMapHistoryLogs(mapped, {
+    isPro,
+    enforce: isPaywallEnabled(),
+  });
 
   return (
     <BodyMap
@@ -85,6 +96,7 @@ function AppShell() {
         defaultSiteId={modalSiteId}
         defaultCompoundName={modalCompoundName}
       />
+      <SoftPaywall />
     </div>
   );
 }
@@ -95,13 +107,15 @@ function AppRoutes() {
       <Route path="/auth/callback" component={AuthCallback} />
       <Route>
         <AuthGate>
-          <SecurityProvider>
-            <SecurityGate>
-              <PinsProvider>
-                <AppShell />
-              </PinsProvider>
-            </SecurityGate>
-          </SecurityProvider>
+          <EntitlementProvider>
+            <SecurityProvider>
+              <SecurityGate>
+                <PinsProvider>
+                  <AppShell />
+                </PinsProvider>
+              </SecurityGate>
+            </SecurityProvider>
+          </EntitlementProvider>
         </AuthGate>
       </Route>
     </Switch>
@@ -109,6 +123,8 @@ function AppRoutes() {
 }
 
 function App() {
+  useAndroidBackButton();
+
   return (
     <TooltipProvider>
       <AuthProvider>

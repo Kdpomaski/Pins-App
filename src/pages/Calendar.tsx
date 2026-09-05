@@ -1,14 +1,23 @@
 import { useState } from "react";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Download } from "lucide-react";
+import { formatBlendBreakdown, resolveBlendComponents } from "@/lib/blend";
 import { usePinsStore } from "@/lib/store";
 import { siteLabel } from "@/lib/body-map-data";
 import { ScheduleExportModal } from "@/components/ScheduleExportModal";
+import { useBilling } from "@/lib/billing/billing-context";
 
 export default function CalendarView() {
   const { data } = usePinsStore();
+  const { requirePro, paywallEnabled } = useBilling();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [exportOpen, setExportOpen] = useState(false);
+
+  const handleExportClick = () => {
+    // SoftPaywall OFF → free .ics + text export (no Pro gate).
+    if (paywallEnabled && !requirePro("export_pdf", { reason: "export_locked" })) return;
+    setExportOpen(true);
+  };
 
   const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
@@ -18,12 +27,12 @@ export default function CalendarView() {
   const today = () => setCurrentDate(new Date());
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 pt-6 px-4 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground pb-nav pt-6 px-4 flex flex-col">
       <div className="max-w-md mx-auto w-full flex-1">
 
         <header className="flex justify-between items-center mb-8">
           <button
-            onClick={() => setExportOpen(true)}
+            onClick={handleExportClick}
             className="flex items-center gap-1.5 text-sm font-medium border border-border bg-card px-3 py-2 rounded-full hover:bg-muted/50 transition-colors"
             aria-label="Export schedule"
           >
@@ -129,6 +138,17 @@ export default function CalendarView() {
                                     {dose.dose} {dose.unit}
                                   </span>
                                 </div>
+                                {(() => {
+                                  const breakdown = formatBlendBreakdown(
+                                    resolveBlendComponents(
+                                      log ?? { compound: dose.compound },
+                                      data.inventory,
+                                    ),
+                                  );
+                                  return breakdown ? (
+                                    <p className="text-xs text-muted-foreground mt-0.5">{breakdown}</p>
+                                  ) : null;
+                                })()}
                                 <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
                                   <span>{dose.time}</span>
                                   {log && (
@@ -159,6 +179,14 @@ export default function CalendarView() {
                                     Ad-hoc
                                   </span>
                                 </div>
+                                {(() => {
+                                  const breakdown = formatBlendBreakdown(
+                                    resolveBlendComponents(log, data.inventory),
+                                  );
+                                  return breakdown ? (
+                                    <p className="text-xs text-muted-foreground mt-0.5">{breakdown}</p>
+                                  ) : null;
+                                })()}
                                 <div className="text-xs text-muted-foreground mt-0.5">
                                   {log.dose} {log.unit} • {format(new Date(log.timestamp), "HH:mm")} •{" "}
                                   {siteLabel(log.siteId)}

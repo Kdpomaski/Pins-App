@@ -16,6 +16,7 @@ import {
   hasAuthCallbackParams,
 } from '@/lib/auth-callback';
 import { getAuthRedirectUrl, isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { ensureNativeAuthDeepLinkListener, startGoogleOAuth } from '@/lib/native-oauth';
 
 type AuthStatus = 'loading' | 'unauthenticated' | 'onboarding' | 'authenticated';
 
@@ -113,11 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: getAuthRedirectUrl() },
-    });
-    return { error: error?.message };
+    const { error } = await startGoogleOAuth();
+    return { error };
   }, []);
 
   const signOut = useCallback(async () => {
@@ -131,6 +129,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = useCallback(async () => {
     await loadProfile(session);
   }, [loadProfile, session]);
+
+
+  useEffect(() => {
+    ensureNativeAuthDeepLinkListener((result) => {
+      if (result.error) {
+        console.warn('[auth] native oauth callback', result.error);
+      }
+      // onAuthStateChange picks up the new session after exchangeCodeForSession
+    });
+  }, []);
 
   const value = useMemo(
     () => ({

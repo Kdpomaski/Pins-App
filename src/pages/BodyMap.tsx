@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ProtocolChips } from '@/components/ProtocolChips';
 import { usePinsStore, type InventoryItem } from '@/lib/store';
 
 interface InjectionLog {
@@ -104,7 +105,7 @@ const BodyMap: React.FC<{
   const regions = allRegions.filter((r) => r.view === view);
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 pt-6 px-4">
+    <div className="min-h-screen bg-background text-foreground pb-nav pt-6 px-4">
       <Card className="p-4 sm:p-6 bg-card border border-border max-w-4xl mx-auto shadow-sm">
         <div className="flex justify-between items-center mb-4 sm:mb-6 gap-3">
           <div>
@@ -161,7 +162,10 @@ const BodyMap: React.FC<{
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span className="truncate flex-1">{item.name}</span>
+                    <span className="truncate flex-1">
+                      {item.name}
+                      {item.isBlend ? ' · blend' : ''}
+                    </span>
                     {vialCount > 1 && (
                       <span className="text-xs font-mono text-muted-foreground shrink-0">{vialCount}</span>
                     )}
@@ -171,6 +175,16 @@ const BodyMap: React.FC<{
             </div>
             {data.inventory.length === 0 && (
               <p className="text-xs text-muted-foreground mt-2">Add vials in Inventory to filter by compound.</p>
+            )}
+            {selectedCompound && (
+              <ProtocolChips
+                frequency={selectedCompound.frequency}
+                dose={selectedCompound.defaultDose}
+                doseUnit={selectedCompound.unit}
+                concentration={selectedCompound.concentration}
+                concentrationUnit={selectedCompound.unit}
+                className="mt-3 flex flex-wrap items-center gap-2"
+              />
             )}
           </aside>
 
