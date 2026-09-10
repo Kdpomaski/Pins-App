@@ -3,12 +3,14 @@ import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Download } from "lucide-react";
 import { formatBlendBreakdown, resolveBlendComponents } from "@/lib/blend";
 import { usePinsStore } from "@/lib/store";
+import { useShotActions } from "@/lib/shot-actions";
 import { siteLabel } from "@/lib/body-map-data";
 import { ScheduleExportModal } from "@/components/ScheduleExportModal";
 import { useBilling } from "@/lib/billing/billing-context";
 
 export default function CalendarView() {
   const { data } = usePinsStore();
+  const { requestEditLog } = useShotActions();
   const { requirePro, paywallEnabled } = useBilling();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [exportOpen, setExportOpen] = useState(false);
@@ -123,7 +125,23 @@ export default function CalendarView() {
                           const log = daysLogs.find((l) => l.compound === dose.compound);
 
                           return (
-                            <div key={dose.id} className="flex items-start gap-3">
+                            <div
+                              key={dose.id}
+                              className={`flex items-start gap-3 ${log ? "cursor-pointer rounded-lg hover:bg-muted/30 -mx-1 px-1" : ""}`}
+                              onClick={log ? () => requestEditLog(log) : undefined}
+                              role={log ? "button" : undefined}
+                              tabIndex={log ? 0 : undefined}
+                              onKeyDown={
+                                log
+                                  ? (e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        requestEditLog(log);
+                                      }
+                                    }
+                                  : undefined
+                              }
+                            >
                               <div className="mt-0.5 text-muted-foreground">
                                 {log ? (
                                   <CheckCircle2 size={18} className="text-primary" />
@@ -168,7 +186,19 @@ export default function CalendarView() {
                         {daysLogs
                           .filter((l) => !daysDoses.some((d) => d.compound === l.compound))
                           .map((log) => (
-                            <div key={log.id} className="flex items-start gap-3 opacity-80">
+                            <div
+                              key={log.id}
+                              className="flex items-start gap-3 opacity-80 cursor-pointer rounded-lg hover:bg-muted/30 -mx-1 px-1"
+                              onClick={() => requestEditLog(log)}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  requestEditLog(log);
+                                }
+                              }}
+                            >
                               <div className="mt-0.5 text-muted-foreground">
                                 <CheckCircle2 size={18} className="text-primary" />
                               </div>

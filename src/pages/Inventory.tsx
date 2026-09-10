@@ -680,7 +680,7 @@ function AddInventoryModal({
             </label>
             <input
               type="text"
-              placeholder={isBlend ? "e.g. Glow" : "e.g. EXAMPLE"}
+              placeholder={isBlend ? "e.g. Glow" : "e.g. Compound name"}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full bg-input/50 border border-border rounded-lg p-3 text-foreground focus:ring-1 focus:ring-primary focus:outline-none"

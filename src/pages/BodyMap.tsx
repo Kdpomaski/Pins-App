@@ -3,9 +3,10 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ProtocolChips } from '@/components/ProtocolChips';
+import { sitesForView } from '@/lib/body-map-data';
 import { usePinsStore, type InventoryItem } from '@/lib/store';
 
-interface InjectionLog {
+interface MapLog {
   id: string;
   siteId: string;
   region: string;
@@ -14,50 +15,15 @@ interface InjectionLog {
   time: string;
 }
 
-type Region = {
-  id: string;
-  label: string;
-  view: 'front' | 'back';
-  x: number;
-  y: number;
-};
-
-const allRegions: Region[] = [
-  { id: 'left-deltoid', label: 'Left Deltoid', view: 'front', x: 37, y: 23 },
-  { id: 'right-deltoid', label: 'Right Deltoid', view: 'front', x: 63, y: 23 },
-  { id: 'upper-left-abdomen', label: 'Upper Left Abdomen', view: 'front', x: 47, y: 33 },
-  { id: 'upper-right-abdomen', label: 'Upper Right Abdomen', view: 'front', x: 53, y: 33 },
-  { id: 'mid-left-abdomen', label: 'Mid Left Abdomen', view: 'front', x: 47, y: 38 },
-  { id: 'mid-right-abdomen', label: 'Mid Right Abdomen', view: 'front', x: 53, y: 38 },
-  { id: 'lower-left-abdomen', label: 'Lower Left Abdomen', view: 'front', x: 47, y: 42 },
-  { id: 'lower-right-abdomen', label: 'Lower Right Abdomen', view: 'front', x: 53, y: 42 },
-  { id: 'left-flank', label: 'Left Flank', view: 'front', x: 40, y: 45 },
-  { id: 'right-flank', label: 'Right Flank', view: 'front', x: 60, y: 45 },
-  { id: 'left-wrist', label: 'Left Wrist', view: 'front', x: 22, y: 45 },
-  { id: 'right-wrist', label: 'Right Wrist', view: 'front', x: 78, y: 45 },
-  { id: 'left-quadriceps', label: 'Left Quadriceps', view: 'front', x: 44, y: 53 },
-  { id: 'right-quadriceps', label: 'Right Quadriceps', view: 'front', x: 58, y: 53 },
-  { id: 'left-knee', label: 'Left Knee', view: 'front', x: 42, y: 60 },
-  { id: 'right-knee', label: 'Right Knee', view: 'front', x: 58, y: 60 },
-  { id: 'left-ankle', label: 'Left Ankle', view: 'front', x: 42, y: 82 },
-  { id: 'right-ankle', label: 'Right Ankle', view: 'front', x: 58, y: 82 },
-  { id: 'left-triceps', label: 'Left Triceps', view: 'back', x: 35, y: 25 },
-  { id: 'right-triceps', label: 'Right Triceps', view: 'back', x: 65, y: 25 },
-  { id: 'left-glute', label: 'Left Glute', view: 'back', x: 42, y: 46 },
-  { id: 'right-glute', label: 'Right Glute', view: 'back', x: 57, y: 46 },
-  { id: 'left-knee', label: 'Left Knee', view: 'back', x: 42, y: 64 },
-  { id: 'right-knee', label: 'Right Knee', view: 'back', x: 58, y: 64 },
-  { id: 'left-ankle', label: 'Left Ankle', view: 'back', x: 42, y: 85 },
-  { id: 'right-ankle', label: 'Right Ankle', view: 'back', x: 58, y: 85 },
-];
-
 const NEUTRAL_PIN = 'rgba(255, 255, 255, 0.12)';
 
 const BodyMap: React.FC<{
   onLogInjection?: (siteId: string, compoundName?: string) => void;
-  logs?: InjectionLog[];
+  onExistingShot?: (logId: string) => void;
+  logs?: MapLog[];
 }> = ({
   onLogInjection,
+  onExistingShot,
   logs = [],
 }) => {
   const { data } = usePinsStore();
@@ -90,7 +56,7 @@ const BodyMap: React.FC<{
     return siteLogs.length ? format(new Date(siteLogs[0].time), 'MMM d, yyyy') : null;
   };
 
-  const getStatusColor = (siteLogs: InjectionLog[]) => {
+  const getStatusColor = (siteLogs: MapLog[]) => {
     if (selectedCompound && siteLogs.length === 0) return NEUTRAL_PIN;
 
     if (siteLogs.length === 0) return 'rgba(74, 222, 128, 0.5)';
@@ -102,7 +68,7 @@ const BodyMap: React.FC<{
     return 'rgba(74, 222, 128, 0.5)';
   };
 
-  const regions = allRegions.filter((r) => r.view === view);
+  const regions = sitesForView(view);
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-nav pt-6 px-4">
@@ -221,6 +187,7 @@ const BodyMap: React.FC<{
                 const color = getStatusColor(siteLogs);
                 const lastDate = getLastDate(r.id);
                 const hasFilteredPin = siteLogs.length > 0;
+                const latestLog = siteLogs[0];
 
                 const title = selectedCompound
                   ? `${r.label} — ${lastDate ?? 'Never'}`
@@ -232,13 +199,19 @@ const BodyMap: React.FC<{
                   <button
                     key={`${r.view}-${r.id}`}
                     type="button"
-                    onClick={() => onLogInjection?.(r.id, selectedCompound?.name)}
+                    onClick={() => {
+                      if (latestLog && onExistingShot) {
+                        onExistingShot(latestLog.id);
+                        return;
+                      }
+                      onLogInjection?.(r.id, selectedCompound?.name);
+                    }}
                     aria-label={title}
                     title={title}
                     className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 focus:outline-none focus:ring-4 focus:ring-primary/50 group touch-manipulation"
                     style={{
-                      left: `${r.x}%`,
-                      top: `${r.y}%`,
+                      left: `${r.cx}%`,
+                      top: `${r.cy}%`,
                       width: '6%',
                       height: '6%',
                       minWidth: '28px',

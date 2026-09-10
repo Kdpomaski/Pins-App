@@ -12,7 +12,7 @@ import {
 import { getDeviceId } from '@/lib/device';
 import { pinsDataSchema } from '@/lib/schemas';
 import { buildSyncEnvelope, SCHEMA_VERSION, type SyncEnvelope } from '@/lib/sync';
-import { DEFAULT_DATA } from '@/lib/default-data';
+import { DEFAULT_DATA, stripSeedExampleInventory } from '@/lib/default-data';
 import type { PinsData } from '@/lib/store';
 
 const SECURE_KEY = 'pins_secure_v1';
@@ -102,16 +102,16 @@ export function saveSecurityConfig(config: SecurityConfig) {
 
 export async function bootstrapPinsData(cryptoKey: CryptoKey): Promise<PinsData> {
   const encrypted = await loadEncrypted(cryptoKey);
-  if (encrypted) return encrypted.data;
+  if (encrypted) return stripSeedExampleInventory(encrypted.data);
 
   const legacy = readLegacyPlaintext();
   if (legacy) {
-    const envelope = await migrateToEncrypted(legacy);
+    const envelope = await migrateToEncrypted(stripSeedExampleInventory(legacy));
     return envelope.data;
   }
 
   const deviceEnvelope = await loadWithDeviceKey();
-  if (deviceEnvelope) return deviceEnvelope.data;
+  if (deviceEnvelope) return stripSeedExampleInventory(deviceEnvelope.data);
 
   const fresh = buildSyncEnvelope(getDeviceId(), DEFAULT_DATA);
   await saveWithDeviceKey(fresh);
