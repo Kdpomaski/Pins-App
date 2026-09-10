@@ -4,16 +4,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, MapPin, Clock } from "lucide-react";
 import { formatBlendBreakdown } from "@/lib/blend";
 import { doseVolumeMl } from "@/lib/dose-volume";
+import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/datetime-local";
 import { usePinsStore } from "@/lib/store";
 import { useBilling } from "@/lib/billing/billing-context";
 import { bodySites, siteLabel } from "@/lib/body-map-data";
-import type { InventoryItem } from "@/lib/store";
+import type { InjectionLog, InventoryItem } from "@/lib/store";
 
 type InjectionLoggerModalProps = {
   isOpen: boolean;
   onClose: () => void;
   defaultSiteId?: string | null;
   defaultCompoundName?: string | null;
+  editLog?: InjectionLog | null;
 };
 
 function compoundsByUsage(
@@ -43,9 +45,11 @@ export function InjectionLoggerModal({
   onClose,
   defaultSiteId,
   defaultCompoundName,
+  editLog = null,
 }: InjectionLoggerModalProps) {
-  const { data, addLog } = usePinsStore();
+  const { data, addLog, updateLog } = usePinsStore();
   const { maybeShowSoftPaywallAfterFirstLog } = useBilling();
+  const isEditing = Boolean(editLog);
 
   const compoundOptions = useMemo(
     () => compoundsByUsage(data.inventory, data.logs),
@@ -57,9 +61,10 @@ export function InjectionLoggerModal({
   const [dose, setDose] = useState("");
   const [unit, setUnit] = useState<"mg" | "mcg">("mcg");
   const [notes, setNotes] = useState("");
+  const [timestampLocal, setTimestampLocal] = useState("");
   const [error, setError] = useState("");
 
-  const quickMode = Boolean(defaultSiteId);
+  const quickMode = Boolean(defaultSiteId) && !isEditing;
   const selectedSite = bodySites.find((s) => s.id === siteId);
 
   const lastInjectionLabel = useMemo(() => {
@@ -87,9 +92,21 @@ export function InjectionLoggerModal({
 
   useEffect(() => {
     if (!isOpen) return;
+    setError("");
+
+    if (editLog) {
+      setSiteId(editLog.siteId);
+      setCompound(editLog.compound);
+      setDose(String(editLog.dose));
+      setUnit(editLog.unit);
+      setNotes(editLog.notes ?? "");
+      setTimestampLocal(toDatetimeLocalValue(editLog.timestamp));
+      return;
+    }
+
     setSiteId(defaultSiteId ?? "");
     setNotes("");
-    setError("");
+    setTimestampLocal(toDatetimeLocalValue(new Date().toISOString()));
 
     if (defaultCompoundName) {
       applyCompound(defaultCompoundName);
@@ -102,7 +119,7 @@ export function InjectionLoggerModal({
       setDose("");
       setUnit("mcg");
     }
-  }, [isOpen, defaultSiteId, defaultCompoundName, compoundOptions]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, defaultSiteId, defaultCompoundName, compoundOptions, editLog]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCompoundChange = (name: string) => {
     applyCompound(name);
@@ -113,8 +130,16 @@ export function InjectionLoggerModal({
       setError("Tap a location on the body map first.");
       return;
     }
+    if (!isEditing && data.inventory.length === 0) {
+      setError("Add a compound in Inventory before logging a shot.");
+      return;
+    }
     if (!compound || !dose) {
       setError("Select a compound and enter a dose.");
+      return;
+    }
+    if (!isEditing && !data.inventory.some((item) => item.name === compound)) {
+      setError("Add that compound in Inventory first.");
       return;
     }
 
@@ -124,32 +149,46 @@ export function InjectionLoggerModal({
       return;
     }
 
-    // Soft paywall AFTER first real dose — never blocks basic logging.
-    const priorLogCount = data.logs.filter((l) => !l.deletedAt).length;
+    const timestamp = isEditing
+      ? fromDatetimeLocalValue(timestampLocal)
+      : new Date().toISOString();
+    if (!timestamp) {
+      setError("Choose a valid date and time.");
+      return;
+    }
 
     const inventoryItem = data.inventory.find((i) => i.name === compound);
-    const result = addLog({
+    const payload = {
       siteId,
       compound,
       dose: doseNum,
       unit,
-      timestamp: new Date().toISOString(),
+      timestamp,
       notes: notes.trim() || undefined,
       ...(inventoryItem?.isBlend && inventoryItem.blendComponents?.length
         ? { blendComponents: inventoryItem.blendComponents }
-        : {}),
-    });
+        : editLog?.blendComponents?.length
+          ? { blendComponents: editLog.blendComponents }
+          : {}),
+    };
+
+    const result = isEditing && editLog
+      ? updateLog(editLog.id, payload)
+      : addLog(payload);
 
     if (!result.ok) {
       setError(result.error);
       return;
     }
 
-    maybeShowSoftPaywallAfterFirstLog(priorLogCount);
+    if (!isEditing) {
+      const priorLogCount = data.logs.filter((l) => !l.deletedAt).length;
+      maybeShowSoftPaywallAfterFirstLog(priorLogCount);
+    }
     onClose();
   };
 
-  const canSave = Boolean(siteId && compound && dose);
+  const canSave = Boolean(siteId && compound && dose && (isEditing || data.inventory.length > 0));
 
   const selectedItem = data.inventory.find((item) => item.name === compound);
   const drawnVolume = doseVolumeMl({
@@ -175,11 +214,21 @@ export function InjectionLoggerModal({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t-2 border-border rounded-t-3xl max-w-md mx-auto shadow-2xl px-5 pt-5 pb-safe"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t-2 border-border rounded-t-3xl max-w-md mx-auto shadow-2xl px-5 pt-5 pb-safe max-h-[92vh] overflow-y-auto"
           >
             <div className="flex justify-between items-start mb-5">
               <div className="min-w-0 flex-1 pr-3">
-                {quickMode && selectedSite ? (
+                {isEditing ? (
+                  <>
+                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Edit shot
+                    </p>
+                    <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 mt-1">
+                      <MapPin size={22} className="text-primary shrink-0" />
+                      <span className="truncate">{selectedSite?.label ?? "Saved shot"}</span>
+                    </h2>
+                  </>
+                ) : quickMode && selectedSite ? (
                   <>
                     <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                       Log injection
@@ -208,7 +257,7 @@ export function InjectionLoggerModal({
               </button>
             </div>
 
-            {!quickMode && (
+            {(!quickMode || isEditing) && (
               <div className="mb-5">
                 <label className="text-sm font-semibold text-muted-foreground block mb-2">
                   Injection site
@@ -235,10 +284,10 @@ export function InjectionLoggerModal({
               </div>
             )}
 
-            {compoundOptions.length === 0 ? (
+            {compoundOptions.length === 0 && !isEditing ? (
               <div className="mb-5 rounded-xl border border-border bg-muted/30 p-4 text-center">
                 <p className="text-base text-muted-foreground">
-                  Add compounds in Inventory first.
+                  Add a compound in Inventory before logging a shot.
                 </p>
               </div>
             ) : (
@@ -257,6 +306,9 @@ export function InjectionLoggerModal({
                         {item.isBlend ? `${item.name} (blend)` : item.name}
                       </option>
                     ))}
+                    {isEditing && editLog && !compoundOptions.some((item) => item.name === editLog.compound) ? (
+                      <option value={editLog.compound}>{editLog.compound}</option>
+                    ) : null}
                   </select>
                   {(() => {
                     const selected = compoundOptions.find((item) => item.name === compound);
@@ -302,6 +354,20 @@ export function InjectionLoggerModal({
                   )}
                 </div>
 
+                {isEditing && (
+                  <div>
+                    <label className="text-sm font-semibold text-muted-foreground block mb-2">
+                      Date & time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={timestampLocal}
+                      onChange={(e) => setTimestampLocal(e.target.value)}
+                      className="w-full bg-input/50 border-2 border-border rounded-xl p-4 text-lg text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                  </div>
+                )}
+
                 <div>
                   <label className="text-sm font-semibold text-muted-foreground block mb-2">
                     Notes <span className="font-normal">(optional)</span>
@@ -325,7 +391,7 @@ export function InjectionLoggerModal({
 
             <button
               onClick={handleSave}
-              disabled={!canSave || compoundOptions.length === 0}
+              disabled={!canSave || (!isEditing && compoundOptions.length === 0)}
               className="w-full bg-primary text-primary-foreground font-bold text-xl rounded-2xl py-5 flex items-center justify-center gap-3 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity active:scale-[0.98] mb-2"
             >
               <Check size={26} strokeWidth={3} />

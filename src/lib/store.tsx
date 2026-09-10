@@ -78,6 +78,10 @@ type PinsStoreContextType = {
   data: PinsData;
   ready: boolean;
   addLog: (log: Omit<InjectionLog, 'id' | 'updatedAt'>) => { ok: true } | { ok: false; error: string };
+  updateLog: (
+    id: string,
+    updates: Omit<InjectionLog, 'id' | 'updatedAt' | 'deletedAt'>,
+  ) => { ok: true } | { ok: false; error: string };
   updateInventory: (id: string, updates: Partial<InventoryItem>) => void;
   addInventoryItem: (item: Omit<InventoryItem, 'id' | 'updatedAt'>) => { ok: true } | { ok: false; error: string };
   deleteInventoryItem: (id: string) => void;
@@ -167,6 +171,31 @@ export function PinsProvider({ children }: { children: ReactNode }) {
     return { ok: true as const };
   };
 
+  const updateLog = (id: string, updates: Omit<InjectionLog, 'id' | 'updatedAt' | 'deletedAt'>) => {
+    const parsed = newInjectionLogSchema.safeParse(updates);
+    if (!parsed.success) return { ok: false as const, error: formatZodError(parsed.error) };
+    if (!data.logs.some((log) => log.id === id)) {
+      return { ok: false as const, error: 'Shot not found.' };
+    }
+
+    const now = new Date().toISOString();
+    setData((prev) => {
+      if (!prev.logs.some((log) => log.id === id)) return prev;
+      return {
+        ...prev,
+        logs: prev.logs
+          .map((log) =>
+            log.id === id
+              ? { ...log, ...parsed.data, id: log.id, updatedAt: now, deletedAt: log.deletedAt }
+              : log,
+          )
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+      };
+    });
+
+    return { ok: true as const };
+  };
+
   const updateInventory = (id: string, updates: Partial<InventoryItem>) => {
     setData((prev) => ({
       ...prev,
@@ -220,7 +249,7 @@ export function PinsProvider({ children }: { children: ReactNode }) {
 
   return (
     <PinsStoreContext.Provider
-      value={{ data, ready, addLog, updateInventory, addInventoryItem, deleteInventoryItem }}
+      value={{ data, ready, addLog, updateLog, updateInventory, addInventoryItem, deleteInventoryItem }}
     >
       {children}
     </PinsStoreContext.Provider>

@@ -4,6 +4,7 @@ import { Flame, Syringe, Droplets, Droplet, Calculator, Shield } from "lucide-re
 import { Link } from "wouter";
 import { formatBlendBreakdown, resolveBlendComponents } from "@/lib/blend";
 import { usePinsStore } from "@/lib/store";
+import { useShotActions } from "@/lib/shot-actions";
 import { SecurityBadge, SecuritySettings } from "@/components/SecuritySettings";
 
 // ── Brand logo matching the uploaded Pins identity ────────────────────────────
@@ -54,6 +55,7 @@ function PinsHeader() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { data } = usePinsStore();
+  const { requestEditLog } = useShotActions();
   const [securityOpen, setSecurityOpen] = useState(false);
 
   const todayStr   = format(new Date(), "EEEE");
@@ -83,7 +85,7 @@ export default function Dashboard() {
   const todaysLogs  = data.logs.filter(
     (l) => format(new Date(l.timestamp), "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
   );
-  const recentLogs   = data.logs.slice(0, 5);
+  const recentLogs   = data.logs.filter((l) => !l.deletedAt).slice(0, 5);
   const lowInventory = data.inventory.filter((i) => i.remainingVolume / i.totalVolume < 0.2);
 
   return (
@@ -225,7 +227,12 @@ export default function Dashboard() {
                 const siteLabel = log.siteId.replace(/-/g, " ");
 
                 return (
-                  <div key={log.id} className="flex items-center gap-4 py-2 border-b border-border last:border-0">
+                  <button
+                    type="button"
+                    key={log.id}
+                    onClick={() => requestEditLog(log)}
+                    className="flex items-center gap-4 py-2 border-b border-border last:border-0 w-full text-left hover:bg-muted/30 rounded-lg px-1 -mx-1"
+                  >
                     <div
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{
@@ -251,7 +258,7 @@ export default function Dashboard() {
                         <span className="ml-2 flex-shrink-0">{log.dose} {log.unit}</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
