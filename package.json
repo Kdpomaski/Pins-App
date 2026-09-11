@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "cap:sync": "node scripts/require-supabase-env.mjs && vite build && npx cap sync",
     "cap:android": "node scripts/require-supabase-env.mjs && vite build && npx cap sync android && npx cap open android",
-    "cap:ios": "node scripts/require-supabase-env.mjs && vite build && npx cap sync ios && npx cap open ios"
+    "cap:ios": "node scripts/require-supabase-env.mjs && vite build && npx cap sync ios && npx cap open ios",
+    "test:dose-volume": "node --test src/lib/dose-volume.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.1",
