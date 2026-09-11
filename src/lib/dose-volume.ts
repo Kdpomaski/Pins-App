@@ -19,7 +19,7 @@ export function formatVolumeMl(ml: number): string {
   if (!Number.isFinite(ml) || ml <= 0) return "";
   const abs = Math.abs(ml);
   const decimals = abs >= 1 ? 2 : abs >= 0.01 ? 2 : 3;
-  const text = ml.toFixed(decimals).replace(/\.?0+$/, "");
+  const text = String(Number(ml.toFixed(decimals)));
   return `${text} ml`;
 }
 
@@ -29,7 +29,7 @@ export function formatSyringeUnits(ml: number): string {
   const units = ml * 100;
   const abs = Math.abs(units);
   const decimals = abs >= 10 ? 0 : abs >= 1 ? 1 : 2;
-  const text = units.toFixed(decimals).replace(/\.?0+$/, "");
+  const text = String(Number(units.toFixed(decimals)));
   return `${text} units`;
 }
 
