@@ -48,6 +48,7 @@ export type InventoryItem = {
   frequency?: string;
   defaultDose?: number;
   reconstitutedAt?: string;
+  lotNumber?: string;
   isBlend?: boolean;
   blendComponents?: BlendComponent[];
   updatedAt?: string;
