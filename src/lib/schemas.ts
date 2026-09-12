@@ -33,6 +33,7 @@ export const inventoryItemSchema = z.object({
   frequency: z.string().trim().max(40).optional(),
   defaultDose: z.number().positive().finite().optional(),
   reconstitutedAt: z.string().datetime().optional(),
+  lotNumber: z.string().trim().max(80).optional(),
   isBlend: z.boolean().optional(),
   blendComponents: z.array(blendComponentSchema).optional(),
   updatedAt: z.string().datetime().optional(),
@@ -78,6 +79,7 @@ export const newInventoryItemSchema = z
     frequency: z.string().trim().max(40).optional(),
     defaultDose: z.number().positive().finite().optional(),
     reconstitutedAt: z.string().datetime().optional(),
+    lotNumber: z.string().trim().max(80).optional(),
     isBlend: z.boolean().optional(),
     blendComponents: z.array(blendComponentSchema).optional(),
   })
