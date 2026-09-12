@@ -24,7 +24,7 @@ export function EditShotPrompt({ log, onEdit, onLogNew, onClose }: EditShotPromp
     <AlertDialog open={!!log} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Edit this shot?</AlertDialogTitle>
+          <AlertDialogTitle>This site has a saved shot</AlertDialogTitle>
           {log ? (
             <AlertDialogDescription asChild>
               <div className="space-y-1 text-sm text-muted-foreground">
@@ -46,17 +46,17 @@ export function EditShotPrompt({ log, onEdit, onLogNew, onClose }: EditShotPromp
             type="button"
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted/60"
             onClick={() => {
-              if (log) onLogNew(log);
-            }}
-          >
-            Log new
-          </button>
-          <AlertDialogAction
-            onClick={() => {
               if (log) onEdit(log);
             }}
           >
             Edit
+          </button>
+          <AlertDialogAction
+            onClick={() => {
+              if (log) onLogNew(log);
+            }}
+          >
+            Log new
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

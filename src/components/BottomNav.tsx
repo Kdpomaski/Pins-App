@@ -40,11 +40,12 @@ export function BottomNav({ onOpenLogModal }: { onOpenLogModal: () => void }) {
           data-testid="button-open-log-modal"
           onClick={onOpenLogModal}
           className="flex flex-col items-center justify-center gap-0.5 min-h-[56px] w-14 shrink-0 transition-transform active:scale-95"
-          aria-label="Quick log injection"
+          aria-label="Log ad-hoc shot"
         >
           <span className="w-11 h-11 bg-primary text-primary-foreground border-2 border-border rounded-full flex items-center justify-center shadow-md shadow-primary/25">
             <Plus size={26} strokeWidth={2.5} />
           </span>
+          <span className="text-[10px] font-semibold text-primary">Log</span>
         </button>
         {links.map(renderLink)}
       </div>
