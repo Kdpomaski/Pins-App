@@ -85,7 +85,7 @@ export function remainingDoses(
   return Math.max(0, Math.floor(total / perDose));
 }
 
-function defaultWeekdays(frequency: string): number[] {
+export function defaultWeekdays(frequency: string): number[] {
   const f = frequency.toLowerCase();
   if (f.includes('3x/week')) return [1, 3, 5];
   if (f.includes('2x/week')) return [1, 4];

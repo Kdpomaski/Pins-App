@@ -23,6 +23,7 @@ import {
   deductVolumeFromCompound,
   scheduleForRemainingInventory,
 } from '@/lib/inventory-vials';
+import { syncScheduleWithInventory } from '@/lib/protocol-schedule';
 
 export type InjectionLog = {
   id: string;
@@ -106,7 +107,10 @@ export function PinsProvider({ children }: { children: ReactNode }) {
     (async () => {
       const loaded = await bootstrapPinsData(cryptoKey);
       if (!cancelled) {
-        setData(loaded);
+        setData({
+          ...loaded,
+          schedule: syncScheduleWithInventory(loaded.schedule, loaded.inventory),
+        });
         setReady(true);
       }
     })();
@@ -201,12 +205,17 @@ export function PinsProvider({ children }: { children: ReactNode }) {
   };
 
   const updateInventory = (id: string, updates: Partial<InventoryItem>) => {
-    setData((prev) => ({
-      ...prev,
-      inventory: prev.inventory.map((item) =>
+    setData((prev) => {
+      const inventory = prev.inventory.map((item) =>
         item.id === id ? { ...item, ...updates, updatedAt: new Date().toISOString() } : item,
-      ),
-    }));
+      );
+      const touchesProtocol = 'frequency' in updates || 'defaultDose' in updates || 'unit' in updates || 'name' in updates;
+      return {
+        ...prev,
+        inventory,
+        schedule: touchesProtocol ? syncScheduleWithInventory(prev.schedule, inventory) : prev.schedule,
+      };
+    });
   };
 
   const addInventoryItems = (items: Array<Omit<InventoryItem, 'id' | 'updatedAt'>>) => {
@@ -220,17 +229,21 @@ export function PinsProvider({ children }: { children: ReactNode }) {
     }
 
     const now = new Date().toISOString();
-    setData((prev) => ({
-      ...prev,
-      inventory: [
+    setData((prev) => {
+      const inventory = [
         ...prev.inventory,
         ...parsedItems.map((entry) => ({
           ...entry,
           id: crypto.randomUUID(),
           updatedAt: now,
         })),
-      ],
-    }));
+      ];
+      return {
+        ...prev,
+        inventory,
+        schedule: syncScheduleWithInventory(prev.schedule, inventory),
+      };
+    });
     return { ok: true as const };
   };
 
