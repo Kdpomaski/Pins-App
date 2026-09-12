@@ -20,10 +20,12 @@ const NEUTRAL_PIN = 'rgba(255, 255, 255, 0.12)';
 const BodyMap: React.FC<{
   onLogInjection?: (siteId: string, compoundName?: string) => void;
   onExistingShot?: (logId: string) => void;
+  onAdHoc?: () => void;
   logs?: MapLog[];
 }> = ({
   onLogInjection,
   onExistingShot,
+  onAdHoc,
   logs = [],
 }) => {
   const { data } = usePinsStore();
@@ -82,13 +84,24 @@ const BodyMap: React.FC<{
               <span className="sm:hidden"> · dates show on pins & in popup</span>
             </p>
           </div>
-          <Button
-            variant="outline"
-            className="border-border text-base px-5 py-5 h-auto min-h-[48px]"
-            onClick={() => setView(view === 'front' ? 'back' : 'front')}
-          >
-            {view === 'front' ? 'Back' : 'Front'}
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {onAdHoc && (
+              <Button
+                variant="default"
+                className="text-sm px-3 py-5 h-auto min-h-[48px]"
+                onClick={onAdHoc}
+              >
+                Log ad-hoc
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              className="border-border text-base px-5 py-5 h-auto min-h-[48px]"
+              onClick={() => setView(view === 'front' ? 'back' : 'front')}
+            >
+              {view === 'front' ? 'Back' : 'Front'}
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4">
@@ -200,10 +213,10 @@ const BodyMap: React.FC<{
                     key={`${r.view}-${r.id}`}
                     type="button"
                     onClick={() => {
-                      if (latestLog && onExistingShot) {
-                        onExistingShot(latestLog.id);
-                        return;
-                      }
+                      // Always open ad-hoc / quick log at this site (DoD: empty or history).
+                      // Edit remains available from Schedule / prompt secondary actions.
+                      void latestLog;
+                      void onExistingShot;
                       onLogInjection?.(r.id, selectedCompound?.name);
                     }}
                     aria-label={title}

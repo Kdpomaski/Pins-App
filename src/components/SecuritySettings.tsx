@@ -1,10 +1,21 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, LogOut, Shield, X } from 'lucide-react';
+import { Bell, Lock, LogOut, Shield, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useSecurity } from '@/lib/security-context';
 import { PRIVACY } from '@/lib/privacy';
 import { Button } from '@/components/ui/button';
+import {
+  getShotDueNotificationsEnabled,
+  setShotDueNotificationsEnabled,
+} from '@/lib/notification-prefs';
+import {
+  cancelAllShotNotifications,
+  requestShotNotificationPermission,
+  rescheduleShotDueNotifications,
+} from '@/lib/shot-notifications';
+import { usePinsStore } from '@/lib/store';
+
 
 type SecuritySettingsProps = {
   open: boolean;
@@ -25,10 +36,33 @@ export function SecurityBadge() {
 export function SecuritySettings({ open, onClose }: SecuritySettingsProps) {
   const { user, signOut } = useAuth();
   const { encryptionMode, enablePassphrase, lock } = useSecurity();
+  const { data } = usePinsStore();
   const [passphrase, setPassphrase] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [shotDueOn, setShotDueOn] = useState(getShotDueNotificationsEnabled);
+  const [notifMsg, setNotifMsg] = useState('');
+
+  const handleShotDueToggle = async (next: boolean) => {
+    setNotifMsg('');
+    if (next) {
+      const granted = await requestShotNotificationPermission();
+      if (!granted) {
+        setShotDueOn(false);
+        setShotDueNotificationsEnabled(false);
+        setNotifMsg('Notification permission is required to enable shot reminders.');
+        return;
+      }
+      setShotDueOn(true);
+      setShotDueNotificationsEnabled(true);
+      await rescheduleShotDueNotifications({ schedule: data.schedule, logs: data.logs, enabled: true });
+      return;
+    }
+    setShotDueOn(false);
+    setShotDueNotificationsEnabled(false);
+    await cancelAllShotNotifications();
+  };
 
   const resetForm = () => {
     setPassphrase('');
@@ -150,6 +184,34 @@ export function SecuritySettings({ open, onClose }: SecuritySettingsProps) {
                   </Button>
                 </div>
               )}
+
+              <div className="rounded-xl border border-border bg-background/50 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Bell size={16} className="text-primary" />
+                    <p className="font-medium">Shot-due reminders</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={shotDueOn}
+                    onClick={() => void handleShotDueToggle(!shotDueOn)}
+                    className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors ${
+                      shotDueOn ? 'bg-primary border-primary' : 'bg-muted border-border'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-background shadow transition ${
+                        shotDueOn ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Local alert when a calendar shot is due — “time to take the pin” with compound and dose.
+                </p>
+                {notifMsg && <p className="text-xs text-destructive">{notifMsg}</p>}
+              </div>
 
               <Button
                 variant="outline"

@@ -25,6 +25,7 @@ import { SoftPaywall } from '@/components/SoftPaywall';
 import { filterMapHistoryLogs } from '@/lib/billing/products';
 import { isPaywallEnabled } from '@/lib/billing/feature-flags';
 import { ShotActionsProvider, useShotActions } from '@/lib/shot-actions';
+import { ShotDueNotificationsSync } from '@/components/ShotDueNotificationsSync';
 
 function BodyMapRoute() {
   const { data } = usePinsStore();
@@ -49,6 +50,7 @@ function BodyMapRoute() {
   return (
     <BodyMap
       onLogInjection={(siteId, compoundName) => requestNewLog(siteId, compoundName)}
+      onAdHoc={() => requestNewLog()}
       onExistingShot={(logId) => {
         const log = data.logs.find((entry) => entry.id === logId);
         if (log) requestEditLog(log);
@@ -118,6 +120,7 @@ function AppShell() {
   return (
     <ShotActionsProvider value={shotActions}>
       <div className="bg-background text-foreground min-h-[100dvh] font-sans selection:bg-primary/30">
+        <ShotDueNotificationsSync />
         <ProtectedRouter />
         <BottomNav onOpenLogModal={() => requestNewLog()} />
         <EditShotPrompt
