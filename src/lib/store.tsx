@@ -85,6 +85,9 @@ type PinsStoreContextType = {
   ) => { ok: true } | { ok: false; error: string };
   updateInventory: (id: string, updates: Partial<InventoryItem>) => void;
   addInventoryItem: (item: Omit<InventoryItem, 'id' | 'updatedAt'>) => { ok: true } | { ok: false; error: string };
+  addInventoryItems: (
+    items: Array<Omit<InventoryItem, 'id' | 'updatedAt'>>,
+  ) => { ok: true } | { ok: false; error: string };
   deleteInventoryItem: (id: string) => void;
 };
 
@@ -206,19 +209,32 @@ export function PinsProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const addInventoryItem = (item: Omit<InventoryItem, 'id' | 'updatedAt'>) => {
-    const parsed = newInventoryItemSchema.safeParse(item);
-    if (!parsed.success) return { ok: false as const, error: formatZodError(parsed.error) };
+  const addInventoryItems = (items: Array<Omit<InventoryItem, 'id' | 'updatedAt'>>) => {
+    if (items.length === 0) return { ok: false as const, error: 'No inventory items to add.' };
 
+    const parsedItems: Array<Omit<InventoryItem, 'id' | 'updatedAt'>> = [];
+    for (const item of items) {
+      const parsed = newInventoryItemSchema.safeParse(item);
+      if (!parsed.success) return { ok: false as const, error: formatZodError(parsed.error) };
+      parsedItems.push(parsed.data);
+    }
+
+    const now = new Date().toISOString();
     setData((prev) => ({
       ...prev,
       inventory: [
         ...prev.inventory,
-        { ...parsed.data, id: crypto.randomUUID(), updatedAt: new Date().toISOString() },
+        ...parsedItems.map((entry) => ({
+          ...entry,
+          id: crypto.randomUUID(),
+          updatedAt: now,
+        })),
       ],
     }));
     return { ok: true as const };
   };
+
+  const addInventoryItem = (item: Omit<InventoryItem, 'id' | 'updatedAt'>) => addInventoryItems([item]);
 
   const deleteInventoryItem = (id: string) => {
     setData((prev) => {
@@ -250,7 +266,7 @@ export function PinsProvider({ children }: { children: ReactNode }) {
 
   return (
     <PinsStoreContext.Provider
-      value={{ data, ready, addLog, updateLog, updateInventory, addInventoryItem, deleteInventoryItem }}
+      value={{ data, ready, addLog, updateLog, updateInventory, addInventoryItem, addInventoryItems, deleteInventoryItem }}
     >
       {children}
     </PinsStoreContext.Provider>
