@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
-import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Download, Plus } from "lucide-react";
 import { formatBlendBreakdown, resolveBlendComponents } from "@/lib/blend";
 import { usePinsStore } from "@/lib/store";
 import { useShotActions } from "@/lib/shot-actions";
@@ -10,7 +10,7 @@ import { useBilling } from "@/lib/billing/billing-context";
 
 export default function CalendarView() {
   const { data } = usePinsStore();
-  const { requestEditLog } = useShotActions();
+  const { requestEditLog, requestNewLog } = useShotActions();
   const { requirePro, paywallEnabled } = useBilling();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [exportOpen, setExportOpen] = useState(false);
@@ -32,7 +32,7 @@ export default function CalendarView() {
     <div className="min-h-screen bg-background text-foreground pb-nav pt-6 px-4 flex flex-col">
       <div className="max-w-md mx-auto w-full flex-1">
 
-        <header className="flex justify-between items-center mb-8">
+        <header className="flex justify-between items-center mb-4 gap-2">
           <button
             onClick={handleExportClick}
             className="flex items-center gap-1.5 text-sm font-medium border border-border bg-card px-3 py-2 rounded-full hover:bg-muted/50 transition-colors"
@@ -49,6 +49,16 @@ export default function CalendarView() {
             Today
           </button>
         </header>
+
+        <button
+          type="button"
+          data-testid="button-calendar-adhoc-log"
+          onClick={() => requestNewLog()}
+          className="mb-8 w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-primary bg-primary/10 text-primary font-semibold py-3 hover:bg-primary/15 active:scale-[0.99] transition-colors"
+        >
+          <Plus size={20} strokeWidth={2.5} />
+          Log ad-hoc shot
+        </button>
 
         <div className="flex items-center justify-between bg-card border border-border p-2 rounded-2xl mb-8">
           <button onClick={prevWeek} className="p-2 hover:bg-secondary rounded-xl text-muted-foreground transition-colors">
@@ -105,8 +115,15 @@ export default function CalendarView() {
 
                 <div className="flex-1 pt-1 pb-4">
                   {!hasActivity ? (
-                    <div className="h-full flex items-center border-b border-dashed border-border/50 text-xs text-muted-foreground/50 pb-4">
-                      Rest day
+                    <div className="h-full flex items-center justify-between gap-2 border-b border-dashed border-border/50 text-xs text-muted-foreground/50 pb-4">
+                      <span>Rest day</span>
+                      <button
+                        type="button"
+                        className="text-primary font-semibold hover:underline"
+                        onClick={() => requestNewLog()}
+                      >
+                        Log ad-hoc
+                      </button>
                     </div>
                   ) : (
                     <div
@@ -127,20 +144,20 @@ export default function CalendarView() {
                           return (
                             <div
                               key={dose.id}
-                              className={`flex items-start gap-3 ${log ? "cursor-pointer rounded-lg hover:bg-muted/30 -mx-1 px-1" : ""}`}
-                              onClick={log ? () => requestEditLog(log) : undefined}
-                              role={log ? "button" : undefined}
-                              tabIndex={log ? 0 : undefined}
-                              onKeyDown={
-                                log
-                                  ? (e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault();
-                                        requestEditLog(log);
-                                      }
-                                    }
-                                  : undefined
-                              }
+                              className="flex items-start gap-3 cursor-pointer rounded-lg hover:bg-muted/30 -mx-1 px-1"
+                              onClick={() => {
+                                if (log) requestEditLog(log);
+                                else requestNewLog(undefined, dose.compound);
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  if (log) requestEditLog(log);
+                                  else requestNewLog(undefined, dose.compound);
+                                }
+                              }}
                             >
                               <div className="mt-0.5 text-muted-foreground">
                                 {log ? (

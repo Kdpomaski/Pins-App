@@ -9,6 +9,7 @@ import { usePinsStore } from "@/lib/store";
 import { useBilling } from "@/lib/billing/billing-context";
 import { bodySites, siteLabel } from "@/lib/body-map-data";
 import type { InjectionLog, InventoryItem } from "@/lib/store";
+import { resolveAdHocSiteId } from "@/lib/ad-hoc-log";
 
 type InjectionLoggerModalProps = {
   isOpen: boolean;
@@ -64,6 +65,8 @@ export function InjectionLoggerModal({
   const [timestampLocal, setTimestampLocal] = useState("");
   const [error, setError] = useState("");
 
+  // Map-tap (site provided) stays "quick"; Plus / Schedule open ad-hoc with optional last-site default.
+  const adHocMode = !defaultSiteId && !isEditing;
   const quickMode = Boolean(defaultSiteId) && !isEditing;
   const selectedSite = bodySites.find((s) => s.id === siteId);
 
@@ -104,7 +107,7 @@ export function InjectionLoggerModal({
       return;
     }
 
-    setSiteId(defaultSiteId ?? "");
+    setSiteId(resolveAdHocSiteId(defaultSiteId, data.logs));
     setNotes("");
     setTimestampLocal(toDatetimeLocalValue(new Date().toISOString()));
 
@@ -119,7 +122,7 @@ export function InjectionLoggerModal({
       setDose("");
       setUnit("mcg");
     }
-  }, [isOpen, defaultSiteId, defaultCompoundName, compoundOptions, editLog]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, defaultSiteId, defaultCompoundName, compoundOptions, editLog, data.logs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCompoundChange = (name: string) => {
     applyCompound(name);
@@ -127,7 +130,7 @@ export function InjectionLoggerModal({
 
   const handleSave = () => {
     if (!siteId) {
-      setError("Tap a location on the body map first.");
+      setError("Select an injection site to save this ad-hoc shot.");
       return;
     }
     if (!isEditing && data.inventory.length === 0) {
@@ -245,7 +248,19 @@ export function InjectionLoggerModal({
                     </p>
                   </>
                 ) : (
-                  <h2 className="text-2xl font-bold text-foreground">Quick Log</h2>
+                  <>
+                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      {adHocMode ? "Ad-hoc shot" : "Quick log"}
+                    </p>
+                    <h2 className="text-2xl font-bold text-foreground mt-1">
+                      {adHocMode ? "Log without schedule" : "Quick Log"}
+                    </h2>
+                    {adHocMode ? (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Pick a site and compound, then Save — no calendar item required.
+                      </p>
+                    ) : null}
+                  </>
                 )}
               </div>
               <button
@@ -267,8 +282,8 @@ export function InjectionLoggerModal({
                   onChange={(e) => setSiteId(e.target.value)}
                   className="w-full bg-input/50 border-2 border-border rounded-xl p-4 text-lg text-foreground focus:ring-2 focus:ring-primary focus:outline-none appearance-none"
                 >
-                  <option value="" disabled>
-                    Tap body map or select site…
+                  <option value="">
+                    Select injection site…
                   </option>
                   {bodySites.map((site) => (
                     <option key={site.id} value={site.id}>
@@ -278,7 +293,7 @@ export function InjectionLoggerModal({
                 </select>
                 {!siteId && (
                   <p className="text-sm text-muted-foreground mt-2">
-                    Tip: tap a spot on the body map for fastest logging.
+                    Choose a site here, or tap the body map — schedule is optional.
                   </p>
                 )}
               </div>
