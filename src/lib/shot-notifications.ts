@@ -44,7 +44,8 @@ export function upcomingOccurrences(
   for (let i = 0; i <= horizonDays; i++) {
     const day = addDays(start, i);
     if (!dose.days.includes(day.getDay())) continue;
-    const at = applyTime(day, dose.time || '08:00');
+    if (!dose.time) continue;
+    const at = applyTime(day, dose.time);
     if (at.getTime() <= from.getTime()) continue;
     out.push(at);
   }

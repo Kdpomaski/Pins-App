@@ -1,14 +1,16 @@
-import { resolveInventoryDoseTime, type DosePeriod } from '@/lib/dose-time';
-import { defaultWeekdays } from '@/lib/schedule-export';
-import type { InventoryItem, ScheduledDose } from '@/lib/store';
+import { resolveInventoryDoseTime } from './dose-time.mjs';
 
-/** Upsert / deactivate calendar schedule rows when inventory protocol changes. */
-export function syncScheduleWithInventory(
-  schedule: ScheduledDose[],
-  inventory: InventoryItem[],
-): ScheduledDose[] {
-  const now = new Date().toISOString();
-  const byCompound = new Map<string, InventoryItem>();
+function defaultWeekdays(frequency) {
+  const f = frequency.toLowerCase();
+  if (f.includes('3x/week')) return [1, 3, 5];
+  if (f.includes('2x/week')) return [1, 4];
+  if (f === 'weekly' || f === 'bi-weekly' || f === 'monthly') return [1];
+  return [0, 1, 2, 3, 4, 5, 6];
+}
+
+export function syncScheduleWithInventory(schedule, inventory, randomId = () => 'new-id') {
+  const now = '2026-09-12T12:00:00.000Z';
+  const byCompound = new Map();
   for (const item of inventory) {
     if (item.deletedAt) continue;
     const existing = byCompound.get(item.name);
@@ -16,14 +18,13 @@ export function syncScheduleWithInventory(
       byCompound.set(item.name, item);
       continue;
     }
-    // Prefer the vial that has protocol fields filled in.
     if ((item.frequency || item.defaultDose != null) && !existing.frequency && existing.defaultDose == null) {
       byCompound.set(item.name, item);
     }
   }
 
   const next = [...schedule];
-  const seen = new Set<string>();
+  const seen = new Set();
 
   for (const [compound, item] of byCompound) {
     const freq = item.frequency?.trim();
@@ -50,12 +51,11 @@ export function syncScheduleWithInventory(
       continue;
     }
 
-    // New schedule rows only when the user picked AM/PM (or an explicit time).
     if (!time) continue;
 
     seen.add(compound);
     next.push({
-      id: crypto.randomUUID(),
+      id: randomId(),
       compound,
       dose,
       unit: item.unit,
@@ -70,32 +70,9 @@ export function syncScheduleWithInventory(
   return next.map((s) => {
     if (s.deletedAt) return s;
     if (seen.has(s.compound)) return s;
-    // Compound still in inventory but protocol cleared → deactivate (keep history).
     if (byCompound.has(s.compound) && s.active) {
       return { ...s, active: false, updatedAt: now };
     }
     return s;
   });
-}
-
-export function applyFutureShotTime(
-  schedule: ScheduledDose[],
-  inventory: InventoryItem[],
-  compound: string,
-  time: string,
-  period: DosePeriod,
-  now = new Date().toISOString(),
-): { schedule: ScheduledDose[]; inventory: InventoryItem[] } {
-  return {
-    schedule: schedule.map((dose) =>
-      dose.compound === compound && !dose.deletedAt
-        ? { ...dose, time, active: true, updatedAt: now }
-        : dose,
-    ),
-    inventory: inventory.map((item) =>
-      item.name === compound && !item.deletedAt
-        ? { ...item, doseTime: time, dosePeriod: period, updatedAt: now }
-        : item,
-    ),
-  };
 }

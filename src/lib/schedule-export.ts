@@ -13,6 +13,7 @@ import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { formatBlendBreakdown, resolveBlendComponents } from '@/lib/blend';
+import { plusTwelveHours, resolveInventoryDoseTime } from '@/lib/dose-time';
 import type { InjectionLog, InventoryItem, PinsData } from '@/lib/store';
 
 export type ExportFormat = 'calendar' | 'text';
@@ -61,7 +62,7 @@ async function deliverExport(content: string, filename: string, mime: string): P
 
 function applyTime(date: Date, time: string): Date {
   const [h, m] = time.split(':').map(Number);
-  return setMinutes(setHours(startOfDay(date), h || 8), m || 0);
+  return setMinutes(setHours(startOfDay(date), Number.isFinite(h) ? h : 0), Number.isFinite(m) ? m : 0);
 }
 
 function doseInInventoryUnits(
@@ -111,7 +112,7 @@ function generateDoseDates(
   if (freq === '2x/day') {
     for (let i = 0; results.length < count; i++) {
       const day = addDays(start, Math.floor(i / 2));
-      results.push(applyTime(day, i % 2 === 0 ? '08:00' : '20:00'));
+      results.push(applyTime(day, i % 2 === 0 ? time : plusTwelveHours(time)));
     }
     return results;
   }
@@ -177,7 +178,8 @@ export function buildFutureDoses(
     const schedule = data.schedule.find((s) => s.compound === compound && s.active);
     const dose = schedule?.dose ?? item.defaultDose ?? 0;
     const unit = schedule?.unit ?? item.unit;
-    const time = schedule?.time ?? '08:00';
+    const time = schedule?.time ?? resolveInventoryDoseTime(item);
+    if (!time) continue;
     const frequency = item.frequency ?? 'Weekly';
     const weekdays = schedule?.days?.length ? schedule.days : defaultWeekdays(frequency);
 

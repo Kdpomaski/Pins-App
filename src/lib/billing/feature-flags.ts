@@ -15,9 +15,9 @@ function parseBool(raw: string | undefined, fallback: boolean): boolean {
   return fallback;
 }
 
-/** Soft paywall + Pro gating UI. Default false (TestFlight free ship). */
+/** Soft paywall + Pro gating UI. Kevin standing GO: OFF always. */
 export function isPaywallEnabled(): boolean {
-  return parseBool(import.meta.env.VITE_PAYWALL_ENABLED, false);
+  return false;
 }
 
 /**

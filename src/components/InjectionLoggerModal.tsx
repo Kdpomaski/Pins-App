@@ -10,6 +10,22 @@ import { useBilling } from "@/lib/billing/billing-context";
 import { bodySites, siteLabel } from "@/lib/body-map-data";
 import type { InjectionLog, InventoryItem } from "@/lib/store";
 import { resolveAdHocSiteId } from "@/lib/ad-hoc-log";
+import {
+  formatDoseTimeLabel,
+  hhmmFromTimestamp,
+  loggedPeriodDiffersFromSchedule,
+  periodFromTimestamp,
+} from "@/lib/dose-time";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type InjectionLoggerModalProps = {
   isOpen: boolean;
@@ -48,7 +64,7 @@ export function InjectionLoggerModal({
   defaultCompoundName,
   editLog = null,
 }: InjectionLoggerModalProps) {
-  const { data, addLog, updateLog } = usePinsStore();
+  const { data, addLog, updateLog, updateFutureShotTime } = usePinsStore();
   const { maybeShowSoftPaywallAfterFirstLog } = useBilling();
   const isEditing = Boolean(editLog);
 
@@ -64,6 +80,12 @@ export function InjectionLoggerModal({
   const [notes, setNotes] = useState("");
   const [timestampLocal, setTimestampLocal] = useState("");
   const [error, setError] = useState("");
+  const [timePrompt, setTimePrompt] = useState<{
+    compound: string;
+    time: string;
+    scheduledLabel: string;
+    loggedLabel: string;
+  } | null>(null);
 
   // Map-tap (site provided) stays "quick"; Plus / Schedule open ad-hoc with optional last-site default.
   const adHocMode = !defaultSiteId && !isEditing;
@@ -152,9 +174,7 @@ export function InjectionLoggerModal({
       return;
     }
 
-    const timestamp = isEditing
-      ? fromDatetimeLocalValue(timestampLocal)
-      : new Date().toISOString();
+    const timestamp = fromDatetimeLocalValue(timestampLocal);
     if (!timestamp) {
       setError("Choose a valid date and time.");
       return;
@@ -187,6 +207,16 @@ export function InjectionLoggerModal({
     if (!isEditing) {
       const priorLogCount = data.logs.filter((l) => !l.deletedAt).length;
       maybeShowSoftPaywallAfterFirstLog(priorLogCount);
+      const scheduled = data.schedule.find((s) => s.compound === compound && s.active && !s.deletedAt);
+      if (scheduled && loggedPeriodDiffersFromSchedule(scheduled.time, timestamp)) {
+        setTimePrompt({
+          compound,
+          time: hhmmFromTimestamp(timestamp),
+          scheduledLabel: formatDoseTimeLabel(scheduled.time) ?? scheduled.time,
+          loggedLabel: formatDoseTimeLabel(hhmmFromTimestamp(timestamp)) ?? periodFromTimestamp(timestamp),
+        });
+        return;
+      }
     }
     onClose();
   };
@@ -201,7 +231,16 @@ export function InjectionLoggerModal({
     concentrationUnit: selectedItem?.unit ?? unit,
   });
 
+  const finishTimePrompt = (updateFuture: boolean) => {
+    if (updateFuture && timePrompt) {
+      updateFutureShotTime(timePrompt.compound, timePrompt.time);
+    }
+    setTimePrompt(null);
+    onClose();
+  };
+
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <>
@@ -369,19 +408,17 @@ export function InjectionLoggerModal({
                   )}
                 </div>
 
-                {isEditing && (
-                  <div>
-                    <label className="text-sm font-semibold text-muted-foreground block mb-2">
-                      Date & time
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={timestampLocal}
-                      onChange={(e) => setTimestampLocal(e.target.value)}
-                      className="w-full bg-input/50 border-2 border-border rounded-xl p-4 text-lg text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className="text-sm font-semibold text-muted-foreground block mb-2">
+                    Date & time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={timestampLocal}
+                    onChange={(e) => setTimestampLocal(e.target.value)}
+                    className="w-full bg-input/50 border-2 border-border rounded-xl p-4 text-lg text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
 
                 <div>
                   <label className="text-sm font-semibold text-muted-foreground block mb-2">
@@ -422,5 +459,21 @@ export function InjectionLoggerModal({
         </>
       )}
     </AnimatePresence>
+    <AlertDialog open={!!timePrompt} onOpenChange={(open) => !open && finishTimePrompt(false)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Update future shots?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You logged this at {timePrompt?.loggedLabel}, but upcoming shots are scheduled for {timePrompt?.scheduledLabel}.
+            Move future shots and reminders to {timePrompt?.loggedLabel}?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => finishTimePrompt(false)}>Keep schedule</AlertDialogCancel>
+          <AlertDialogAction onClick={() => finishTimePrompt(true)}>Update future shots</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

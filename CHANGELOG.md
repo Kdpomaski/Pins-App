@@ -7,6 +7,17 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased — Kevin GO SoftPaywall OFF (build 15)
+
+- Restore Body Map Edit + Log new on history sites; keep ad-hoc CTA and empty-site ad-hoc
+- Inventory AM/PM time-of-day drives calendar schedule and shot-due notifications (no silent 08:00 default)
+- Log shots with the actual timestamp; if AM/PM differs from schedule, prompt to update future shots
+- Empty inventory prompts notifications + add inventory
+- SoftPaywall OFF always
+- iOS `CURRENT_PROJECT_VERSION` 15; Android `versionCode` 15
+
+---
+
 ## [1.0.1] — 2026-07-09
 
 Current production build (`main` @ `35f6b07`). Deployed at [pins-app.vercel.app](https://pins-app.vercel.app).
