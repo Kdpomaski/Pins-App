@@ -1,7 +1,7 @@
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
-import { Route, Switch, Router as WouterRouter } from 'wouter';
+import { Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { useCallback, useMemo, useState } from 'react';
 import { useAndroidBackButton } from '@/hooks/use-android-back-button';
 
@@ -26,6 +26,16 @@ import { filterMapHistoryLogs } from '@/lib/billing/products';
 import { isPaywallEnabled } from '@/lib/billing/feature-flags';
 import { ShotActionsProvider, useShotActions } from '@/lib/shot-actions';
 import { ShotDueNotificationsSync } from '@/components/ShotDueNotificationsSync';
+import { ZeroInventoryPrompt } from '@/components/ZeroInventoryPrompt';
+import { requestOpenAddInventory } from '@/lib/inventory-prompt';
+import {
+  getShotDueNotificationsEnabled,
+  setShotDueNotificationsEnabled,
+} from '@/lib/notification-prefs';
+import {
+  requestShotNotificationPermission,
+  rescheduleShotDueNotifications,
+} from '@/lib/shot-notifications';
 
 function BodyMapRoute() {
   const { data } = usePinsStore();
@@ -79,11 +89,16 @@ function ProtectedRouter() {
 }
 
 function AppShell() {
+  const { data } = usePinsStore();
+  const [, setLocation] = useLocation();
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [modalSiteId, setModalSiteId] = useState<string | null>(null);
   const [modalCompoundName, setModalCompoundName] = useState<string | null>(null);
   const [editLog, setEditLog] = useState<InjectionLog | null>(null);
   const [promptLog, setPromptLog] = useState<InjectionLog | null>(null);
+  const [emptyInventoryOpen, setEmptyInventoryOpen] = useState(false);
+  const [notifEnabled, setNotifEnabled] = useState(getShotDueNotificationsEnabled);
+  const [notifMessage, setNotifMessage] = useState('');
 
   const closeLogger = () => {
     setIsLogModalOpen(false);
@@ -93,12 +108,17 @@ function AppShell() {
   };
 
   const requestNewLog = useCallback((siteId?: string, compoundName?: string) => {
+    if (data.inventory.filter((item) => !item.deletedAt).length === 0) {
+      setNotifMessage('');
+      setEmptyInventoryOpen(true);
+      return;
+    }
     setPromptLog(null);
     setEditLog(null);
     setModalSiteId(siteId ?? null);
     setModalCompoundName(compoundName ?? null);
     setIsLogModalOpen(true);
-  }, []);
+  }, [data.inventory]);
 
   const requestEditLog = useCallback((log: InjectionLog) => {
     setPromptLog(log);
@@ -135,6 +155,35 @@ function AppShell() {
           defaultSiteId={modalSiteId}
           defaultCompoundName={modalCompoundName}
           editLog={editLog}
+        />
+        <ZeroInventoryPrompt
+          open={emptyInventoryOpen}
+          onClose={() => setEmptyInventoryOpen(false)}
+          notificationsEnabled={notifEnabled}
+          notifMessage={notifMessage}
+          onAddInventory={() => {
+            requestOpenAddInventory();
+            setEmptyInventoryOpen(false);
+            setLocation('/inventory');
+          }}
+          onEnableNotifications={() => {
+            void (async () => {
+              const granted = await requestShotNotificationPermission();
+              if (!granted) {
+                setNotifEnabled(false);
+                setShotDueNotificationsEnabled(false);
+                setNotifMessage('Notification permission is required for shot reminders.');
+                return;
+              }
+              setNotifEnabled(true);
+              setShotDueNotificationsEnabled(true);
+              await rescheduleShotDueNotifications({
+                schedule: data.schedule,
+                logs: data.logs,
+                enabled: true,
+              });
+            })();
+          }}
         />
         <SoftPaywall />
       </div>

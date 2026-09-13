@@ -162,6 +162,8 @@ const BodyMap: React.FC<{
                 doseUnit={selectedCompound.unit}
                 concentration={selectedCompound.concentration}
                 concentrationUnit={selectedCompound.unit}
+                dosePeriod={selectedCompound.dosePeriod}
+                doseTime={selectedCompound.doseTime}
                 className="mt-3 flex flex-wrap items-center gap-2"
               />
             )}
@@ -213,10 +215,10 @@ const BodyMap: React.FC<{
                     key={`${r.view}-${r.id}`}
                     type="button"
                     onClick={() => {
-                      // Always open ad-hoc / quick log at this site (DoD: empty or history).
-                      // Edit remains available from Schedule / prompt secondary actions.
-                      void latestLog;
-                      void onExistingShot;
+                      if (latestLog && onExistingShot) {
+                        onExistingShot(latestLog.id);
+                        return;
+                      }
                       onLogInjection?.(r.id, selectedCompound?.name);
                     }}
                     aria-label={title}

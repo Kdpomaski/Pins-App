@@ -23,7 +23,8 @@ import {
   deductVolumeFromCompound,
   scheduleForRemainingInventory,
 } from '@/lib/inventory-vials';
-import { syncScheduleWithInventory } from '@/lib/protocol-schedule';
+import { applyFutureShotTime, syncScheduleWithInventory } from '@/lib/protocol-schedule';
+import { periodFromTime, type DosePeriod } from '@/lib/dose-time';
 
 export type InjectionLog = {
   id: string;
@@ -48,6 +49,8 @@ export type InventoryItem = {
   color: string;
   frequency?: string;
   defaultDose?: number;
+  dosePeriod?: DosePeriod;
+  doseTime?: string;
   reconstitutedAt?: string;
   lotNumber?: string;
   isBlend?: boolean;
@@ -90,6 +93,7 @@ type PinsStoreContextType = {
     items: Array<Omit<InventoryItem, 'id' | 'updatedAt'>>,
   ) => { ok: true } | { ok: false; error: string };
   deleteInventoryItem: (id: string) => void;
+  updateFutureShotTime: (compound: string, time: string) => void;
 };
 
 const PinsStoreContext = createContext<PinsStoreContextType | null>(null);
@@ -209,7 +213,13 @@ export function PinsProvider({ children }: { children: ReactNode }) {
       const inventory = prev.inventory.map((item) =>
         item.id === id ? { ...item, ...updates, updatedAt: new Date().toISOString() } : item,
       );
-      const touchesProtocol = 'frequency' in updates || 'defaultDose' in updates || 'unit' in updates || 'name' in updates;
+      const touchesProtocol =
+        'frequency' in updates ||
+        'defaultDose' in updates ||
+        'unit' in updates ||
+        'name' in updates ||
+        'dosePeriod' in updates ||
+        'doseTime' in updates;
       return {
         ...prev,
         inventory,
@@ -249,6 +259,15 @@ export function PinsProvider({ children }: { children: ReactNode }) {
 
   const addInventoryItem = (item: Omit<InventoryItem, 'id' | 'updatedAt'>) => addInventoryItems([item]);
 
+  const updateFutureShotTime = (compound: string, time: string) => {
+    const period = periodFromTime(time);
+    if (!period) return;
+    setData((prev) => {
+      const next = applyFutureShotTime(prev.schedule, prev.inventory, compound, time, period);
+      return { ...prev, ...next };
+    });
+  };
+
   const deleteInventoryItem = (id: string) => {
     setData((prev) => {
       const item = prev.inventory.find((entry) => entry.id === id);
@@ -279,7 +298,17 @@ export function PinsProvider({ children }: { children: ReactNode }) {
 
   return (
     <PinsStoreContext.Provider
-      value={{ data, ready, addLog, updateLog, updateInventory, addInventoryItem, addInventoryItems, deleteInventoryItem }}
+      value={{
+        data,
+        ready,
+        addLog,
+        updateLog,
+        updateInventory,
+        addInventoryItem,
+        addInventoryItems,
+        deleteInventoryItem,
+        updateFutureShotTime,
+      }}
     >
       {children}
     </PinsStoreContext.Provider>

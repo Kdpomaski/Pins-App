@@ -57,6 +57,7 @@ export function SoftPaywall() {
   const showFounding = isFoundingLifetimeEnabled();
   const contextual = reasonCopy(paywallReason);
 
+  // SoftPaywall OFF always — never mount paywall chrome.
   if (!paywallEnabled) return null;
 
   const run = async (key: string, fn: () => Promise<{ ok: boolean; error?: string }>) => {

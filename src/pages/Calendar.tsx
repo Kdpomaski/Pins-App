@@ -5,6 +5,7 @@ import { formatBlendBreakdown, resolveBlendComponents } from "@/lib/blend";
 import { usePinsStore } from "@/lib/store";
 import { useShotActions } from "@/lib/shot-actions";
 import { siteLabel } from "@/lib/body-map-data";
+import { formatDoseTimeLabel } from "@/lib/dose-time";
 import { ScheduleExportModal } from "@/components/ScheduleExportModal";
 import { useBilling } from "@/lib/billing/billing-context";
 
@@ -185,11 +186,11 @@ export default function CalendarView() {
                                   ) : null;
                                 })()}
                                 <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
-                                  <span>{dose.time}</span>
+                                  <span>{formatDoseTimeLabel(dose.time) ?? dose.time}</span>
                                   {log && (
                                     <>
                                       <span className="text-primary">
-                                        • Logged at {format(new Date(log.timestamp), "HH:mm")}
+                                        • Logged at {format(new Date(log.timestamp), "h:mm a")}
                                       </span>
                                       <span>• {siteLabel(log.siteId)}</span>
                                     </>
@@ -235,7 +236,7 @@ export default function CalendarView() {
                                   ) : null;
                                 })()}
                                 <div className="text-xs text-muted-foreground mt-0.5">
-                                  {log.dose} {log.unit} • {format(new Date(log.timestamp), "HH:mm")} •{" "}
+                                  {log.dose} {log.unit} • {format(new Date(log.timestamp), "h:mm a")} •{" "}
                                   {siteLabel(log.siteId)}
                                 </div>
                               </div>

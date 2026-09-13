@@ -63,6 +63,8 @@ export function buildInventoryCsv(items: InventoryItem[]): string {
     'remaining_volume_ml',
     'frequency',
     'default_dose',
+    'dose_period',
+    'dose_time',
     'lot_number',
     'reconstituted_at',
     'is_blend',
@@ -80,6 +82,8 @@ export function buildInventoryCsv(items: InventoryItem[]): string {
       csvEscape(item.remainingVolume),
       csvEscape(item.frequency ?? ''),
       csvEscape(item.defaultDose ?? ''),
+      csvEscape(item.dosePeriod ?? ''),
+      csvEscape(item.doseTime ?? ''),
       csvEscape(item.lotNumber ?? ''),
       csvEscape(item.reconstitutedAt ?? ''),
       csvEscape(item.isBlend ? 'yes' : 'no'),
@@ -114,6 +118,9 @@ export function buildInventoryText(items: InventoryItem[]): string {
     ];
     if (item.frequency) lines.push(`   Frequency: ${item.frequency}`);
     if (item.defaultDose != null) lines.push(`   Default dose: ${item.defaultDose} ${item.unit}`);
+    if (item.dosePeriod || item.doseTime) {
+      lines.push(`   Time of day: ${item.dosePeriod ?? item.doseTime}`);
+    }
     if (item.lotNumber) lines.push(`   Lot: ${item.lotNumber}`);
     if (item.reconstitutedAt) {
       lines.push(`   Reconstituted: ${format(new Date(item.reconstitutedAt), 'yyyy-MM-dd')}`);

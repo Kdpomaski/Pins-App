@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import { formatBlendBreakdown, resolveBlendComponents } from "@/lib/blend";
 import { usePinsStore } from "@/lib/store";
 import { useShotActions } from "@/lib/shot-actions";
+import { formatDoseTimeLabel } from "@/lib/dose-time";
 import { SecurityBadge, SecuritySettings } from "@/components/SecuritySettings";
 
 // ── Brand logo matching the uploaded Pins identity ────────────────────────────
@@ -181,7 +182,7 @@ export default function Dashboard() {
                           )}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          {dose.dose} {dose.unit} at {dose.time}
+                          {dose.dose} {dose.unit} at {formatDoseTimeLabel(dose.time) ?? dose.time}
                         </p>
                         {compoundData?.isBlend && compoundData.blendComponents?.length ? (
                           <p className="text-xs text-muted-foreground mt-0.5">
