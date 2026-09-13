@@ -67,3 +67,13 @@ export function plusTwelveHours(time: string): string {
   const hh = (Number(time.slice(0, 2)) + 12) % 24;
   return `${String(hh).padStart(2, '0')}:${time.slice(3, 5)}`;
 }
+
+/** Keep a custom clock time when flipping AM/PM; only default 08:00/20:00 if unset. */
+export function toggleOrSetPeriod(currentTime: string | undefined, nextPeriod: DosePeriod): string {
+  const currentPeriod = periodFromTime(currentTime);
+  if (currentPeriod === nextPeriod && isHhmm(currentTime)) return currentTime;
+  if (currentPeriod && currentPeriod !== nextPeriod && isHhmm(currentTime)) {
+    return plusTwelveHours(currentTime);
+  }
+  return timeFromPeriod(nextPeriod);
+}

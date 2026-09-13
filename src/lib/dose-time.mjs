@@ -58,3 +58,12 @@ export function plusTwelveHours(time) {
   const hh = (Number(time.slice(0, 2)) + 12) % 24;
   return `${String(hh).padStart(2, '0')}:${time.slice(3, 5)}`;
 }
+
+export function toggleOrSetPeriod(currentTime, nextPeriod) {
+  const currentPeriod = periodFromTime(currentTime);
+  if (currentPeriod === nextPeriod && isHhmm(currentTime)) return currentTime;
+  if (currentPeriod && currentPeriod !== nextPeriod && isHhmm(currentTime)) {
+    return plusTwelveHours(currentTime);
+  }
+  return timeFromPeriod(nextPeriod);
+}

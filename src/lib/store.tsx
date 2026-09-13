@@ -210,6 +210,9 @@ export function PinsProvider({ children }: { children: ReactNode }) {
 
   const updateInventory = (id: string, updates: Partial<InventoryItem>) => {
     setData((prev) => {
+      const existing = prev.inventory.find((item) => item.id === id);
+      const renamedFrom =
+        existing && updates.name && updates.name !== existing.name ? existing.name : null;
       const inventory = prev.inventory.map((item) =>
         item.id === id ? { ...item, ...updates, updatedAt: new Date().toISOString() } : item,
       );
@@ -220,10 +223,16 @@ export function PinsProvider({ children }: { children: ReactNode }) {
         'name' in updates ||
         'dosePeriod' in updates ||
         'doseTime' in updates;
+      let schedule = prev.schedule;
+      if (renamedFrom && updates.name) {
+        schedule = schedule.map((dose) =>
+          dose.compound === renamedFrom ? { ...dose, compound: updates.name as string } : dose,
+        );
+      }
       return {
         ...prev,
         inventory,
-        schedule: touchesProtocol ? syncScheduleWithInventory(prev.schedule, inventory) : prev.schedule,
+        schedule: touchesProtocol ? syncScheduleWithInventory(schedule, inventory) : schedule,
       };
     });
   };

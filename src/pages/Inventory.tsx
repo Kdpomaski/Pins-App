@@ -53,9 +53,10 @@ function formatReconstitutedDate(iso?: string) {
 }
 
 export default function Inventory() {
-  const { data, addInventoryItem, addInventoryItems, deleteInventoryItem } = usePinsStore();
+  const { data, addInventoryItem, addInventoryItems, updateInventory, deleteInventoryItem } = usePinsStore();
   const { requirePro, protocolCountFromData, isPro, paywallEnabled } = useEntitlements();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<InventoryItem | null>(null);
 
@@ -170,6 +171,7 @@ export default function Inventory() {
                 key={name}
                 vials={vials}
                 onAddVial={() => handleAddVialToCompoundGated(vials[0])}
+                onEditVial={setEditingItem}
                 onDeleteVial={setPendingDelete}
               />
             ))
@@ -178,8 +180,19 @@ export default function Inventory() {
       </div>
 
       <AnimatePresence>
-        {isAddModalOpen && (
-          <AddInventoryModal onClose={() => setIsAddModalOpen(false)} onAdd={addInventoryItems} />
+        {(isAddModalOpen || editingItem) && (
+          <AddInventoryModal
+            editItem={editingItem}
+            onClose={() => {
+              setIsAddModalOpen(false);
+              setEditingItem(null);
+            }}
+            onAdd={addInventoryItems}
+            onUpdate={(id, updates) => {
+              updateInventory(id, updates);
+              return { ok: true as const };
+            }}
+          />
         )}
       </AnimatePresence>
 
@@ -217,10 +230,12 @@ export default function Inventory() {
 function CompoundGroupCard({
   vials,
   onAddVial,
+  onEditVial,
   onDeleteVial,
 }: {
   vials: InventoryItem[];
   onAddVial: () => void;
+  onEditVial: (item: InventoryItem) => void;
   onDeleteVial: (item: InventoryItem) => void;
 }) {
   const [extraVialsExpanded, setExtraVialsExpanded] = useState(false);
@@ -236,6 +251,7 @@ function CompoundGroupCard({
         vialIndex={1}
         compoundCount={count}
         onAddVial={onAddVial}
+        onEdit={() => onEditVial(primary)}
         onDelete={() => onDeleteVial(primary)}
         isLast={count === 1 || !extraVialsExpanded}
         chevronExpandsExtraVials={count > 1}
@@ -260,6 +276,7 @@ function CompoundGroupCard({
                 vialIndex={index + 2}
                 compoundCount={count}
                 onAddVial={onAddVial}
+                onEdit={() => onEditVial(item)}
                 onDelete={() => onDeleteVial(item)}
                 isLast={index === extraVials.length - 1}
                 isAdditionalVial
@@ -277,6 +294,7 @@ function VialCard({
   vialIndex,
   compoundCount,
   onAddVial,
+  onEdit,
   onDelete,
   isLast,
   isAdditionalVial = false,
@@ -289,6 +307,7 @@ function VialCard({
   vialIndex: number;
   compoundCount: number;
   onAddVial: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   isLast: boolean;
   isAdditionalVial?: boolean;
@@ -408,6 +427,15 @@ function VialCard({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="text-muted-foreground hover:text-primary transition-colors p-1"
+              aria-label="Edit inventory item"
+              data-testid="button-edit-inventory"
+            >
+              <Pencil size={16} />
+            </button>
             <button
               onClick={handleChevronClick}
               className="text-muted-foreground hover:text-primary transition-colors p-1"
@@ -590,14 +618,12 @@ function VialCard({
               <div>
                 <label className="text-sm text-muted-foreground block mb-1.5">Time of day</label>
                 <DosePeriodField
-                  value={currentPeriod}
-                  onChange={(period: DosePeriod) => {
-                    updateInventory(item.id, { dosePeriod: period, doseTime: timeFromPeriod(period) });
+                  period={currentPeriod}
+                  time={item.doseTime}
+                  onChange={({ period, time }) => {
+                    updateInventory(item.id, { dosePeriod: period, doseTime: time });
                   }}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Used for the calendar and shot-due reminders. Not defaulted to 8:00 AM.
-                </p>
               </div>
             </div>
           </motion.div>
@@ -610,33 +636,62 @@ function VialCard({
 function AddInventoryModal({
   onClose,
   onAdd,
+  onUpdate,
+  editItem = null,
 }: {
   onClose: () => void;
   onAdd: (
     items: Array<Omit<InventoryItem, "id" | "updatedAt">>,
   ) => { ok: true } | { ok: false; error: string };
+  onUpdate?: (
+    id: string,
+    updates: Partial<InventoryItem>,
+  ) => { ok: true } | { ok: false; error: string };
+  editItem?: InventoryItem | null;
 }) {
   const { data } = usePinsStore();
   const { requirePro, protocolCountFromData } = useEntitlements();
-  const [name, setName] = useState("");
-  const [concentration, setConcentration] = useState("");
-  const [totalVolume, setTotalVolume] = useState("");
-  const [unit, setUnit] = useState<"mg" | "mcg">("mg");
-  const [color, setColor] = useState("#3b82f6");
-  const [frequency, setFrequency] = useState("");
-  const [defaultDose, setDefaultDose] = useState("");
-  const [dosePeriod, setDosePeriod] = useState<DosePeriod | "">("");
-  const [lotNumber, setLotNumber] = useState("");
+  const isEditing = Boolean(editItem);
+  const [name, setName] = useState(editItem?.name ?? "");
+  const [concentration, setConcentration] = useState(
+    editItem?.concentration != null ? String(editItem.concentration) : "",
+  );
+  const [totalVolume, setTotalVolume] = useState(
+    editItem?.totalVolume != null ? String(editItem.totalVolume) : "",
+  );
+  const [remainingVolume, setRemainingVolume] = useState(
+    editItem?.remainingVolume != null ? String(editItem.remainingVolume) : "",
+  );
+  const [unit, setUnit] = useState<"mg" | "mcg">(editItem?.unit ?? "mg");
+  const [color, setColor] = useState(editItem?.color ?? "#3b82f6");
+  const [frequency, setFrequency] = useState(editItem?.frequency ?? "");
+  const [defaultDose, setDefaultDose] = useState(
+    editItem?.defaultDose != null ? String(editItem.defaultDose) : "",
+  );
+  const [dosePeriod, setDosePeriod] = useState<DosePeriod | "">(
+    editItem?.dosePeriod ?? periodFromTime(editItem?.doseTime) ?? "",
+  );
+  const [doseTime, setDoseTime] = useState(editItem?.doseTime ?? "");
+  const [lotNumber, setLotNumber] = useState(editItem?.lotNumber ?? "");
   const [isKit, setIsKit] = useState(false);
   const [kitCount, setKitCount] = useState(String(DEFAULT_KIT_VIAL_COUNT));
   const [showFreqPicker, setShowFreqPicker] = useState(false);
-  const [isBlend, setIsBlend] = useState(false);
+  const [isBlend, setIsBlend] = useState(Boolean(editItem?.isBlend));
   const [blendRows, setBlendRows] = useState<
     { key: string; name: string; amount: string; unit: BlendAmountUnit }[]
-  >([
-    { key: crypto.randomUUID(), name: "", amount: "", unit: "mg" },
-    { key: crypto.randomUUID(), name: "", amount: "", unit: "mg" },
-  ]);
+  >(
+    editItem?.isBlend && editItem.blendComponents?.length
+      ? editItem.blendComponents.map((component) => ({
+          key: crypto.randomUUID(),
+          name: component.name,
+          amount: String(component.amount),
+          unit: component.unit,
+        }))
+      : [
+          { key: crypto.randomUUID(), name: "", amount: "", unit: "mg" as BlendAmountUnit },
+          { key: crypto.randomUUID(), name: "", amount: "", unit: "mg" as BlendAmountUnit },
+        ],
+  );
   const [error, setError] = useState("");
 
   const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
@@ -666,35 +721,40 @@ function AddInventoryModal({
       return;
     }
 
+    const remaining = remainingVolume ? Number(remainingVolume) : vol;
+    if (isEditing && (!Number.isFinite(remaining) || remaining < 0)) {
+      setError("Remaining volume must be zero or a positive number.");
+      return;
+    }
+
     const trimmedName = name.trim();
     const isNewCompound = !data.inventory.some(
-      (v) => v.name.toLowerCase() === trimmedName.toLowerCase(),
+      (v) => v.id !== editItem?.id && v.name.toLowerCase() === trimmedName.toLowerCase(),
     );
 
-    if (isNewCompound) {
-      const protocolCount = Math.max(
-        protocolCountFromData(data),
-        new Set(data.inventory.map((v) => v.name.toLowerCase())).size,
-      );
-      if (!requirePro("protocols", { protocolCount, reason: "second_protocol" })) {
-        return;
-      }
-    } else {
-      // Additional vial of existing compound = advanced inventory.
-      if (!requirePro("advanced_inventory", { reason: "generic_pro" })) {
+    if (!isEditing) {
+      if (isNewCompound) {
+        const protocolCount = Math.max(
+          protocolCountFromData(data),
+          new Set(data.inventory.map((v) => v.name.toLowerCase())).size,
+        );
+        if (!requirePro("protocols", { protocolCount, reason: "second_protocol" })) {
+          return;
+        }
+      } else if (!requirePro("advanced_inventory", { reason: "generic_pro" })) {
         return;
       }
     }
 
-    const vialCount = isKit ? clampKitVialCount(Number(kitCount)) : 1;
-    if (isKit && vialCount > 1) {
+    const vialCount = isEditing ? 1 : isKit ? clampKitVialCount(Number(kitCount)) : 1;
+    if (!isEditing && isKit && vialCount > 1) {
       // Kit = multiple vials → advanced inventory (no-op when SoftPaywall OFF).
       if (!requirePro("advanced_inventory", { reason: "generic_pro" })) {
         return;
       }
     }
 
-    let blendPayload: { isBlend: true; blendComponents: NonNullable<InventoryItem["blendComponents"]> } | undefined;
+    let blendPayload: { isBlend: true; blendComponents: NonNullable<InventoryItem["blendComponents"]> } | { isBlend: false; blendComponents: undefined } | undefined;
     if (isBlend) {
       const parsedBlend = parseBlendComponents(blendRows);
       if (!parsedBlend.ok) {
@@ -702,23 +762,36 @@ function AddInventoryModal({
         return;
       }
       blendPayload = { isBlend: true, blendComponents: parsedBlend.components };
+    } else if (isEditing && editItem?.isBlend) {
+      blendPayload = { isBlend: false, blendComponents: undefined };
     }
 
+    const resolvedTime = doseTime || (dosePeriod ? timeFromPeriod(dosePeriod) : undefined);
     const template: Omit<InventoryItem, "id" | "updatedAt"> = {
       name: trimmedName,
       concentration: conc,
       totalVolume: vol,
-      remainingVolume: vol,
+      remainingVolume: isEditing ? Math.min(remaining, vol) : vol,
       unit,
       color,
       frequency: frequency.trim() || undefined,
       defaultDose: doseVal,
       dosePeriod: dosePeriod || undefined,
-      doseTime: dosePeriod ? timeFromPeriod(dosePeriod) : undefined,
-      reconstitutedAt: isNewCompound ? new Date().toISOString() : undefined,
+      doseTime: resolvedTime,
+      reconstitutedAt: isEditing ? editItem?.reconstitutedAt : isNewCompound ? new Date().toISOString() : undefined,
       lotNumber: lotNumber.trim() || undefined,
       ...blendPayload,
     };
+
+    if (isEditing && editItem && onUpdate) {
+      const result = onUpdate(editItem.id, template);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      onClose();
+      return;
+    }
 
     const payloads = expandKitInventoryItems(template, vialCount);
     const result = onAdd(payloads);
@@ -744,7 +817,7 @@ function AddInventoryModal({
         className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border rounded-t-3xl max-w-md mx-auto shadow-2xl p-6 pb-safe h-[90vh] overflow-y-auto"
       >
         <div className="flex justify-between items-center mb-6 sticky top-0 bg-card z-10 pt-2 pb-4">
-          <h2 className="text-xl font-semibold">Add Vial</h2>
+          <h2 className="text-xl font-semibold">{isEditing ? "Edit vial" : "Add Vial"}</h2>
           <button onClick={onClose} className="p-2 -mr-2 text-muted-foreground bg-secondary/50 rounded-full">
             <X size={20} />
           </button>
@@ -780,7 +853,7 @@ function AddInventoryModal({
           </label>
 
           
-          <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-3">
+          {!isEditing && <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-3">
             <input
               id="add-as-kit"
               type="checkbox"
@@ -814,7 +887,7 @@ function AddInventoryModal({
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           {isBlend && (
             <div className="space-y-3 rounded-xl border border-border p-3">
@@ -920,6 +993,22 @@ function AddInventoryModal({
             </div>
           </div>
 
+          {isEditing && (
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Remaining volume (ml)
+              </label>
+              <input
+                type="number"
+                placeholder="e.g. 1.5"
+                step="any"
+                value={remainingVolume}
+                onChange={(e) => setRemainingVolume(e.target.value)}
+                className="w-full bg-input/50 border border-border rounded-lg p-3 text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+              />
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Batch / lot number <span className="normal-case tracking-normal font-normal">(optional)</span>
@@ -980,10 +1069,14 @@ function AddInventoryModal({
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Time of day
               </label>
-              <DosePeriodField value={dosePeriod} onChange={setDosePeriod} />
-              <p className="text-xs text-muted-foreground">
-                AM or PM sets calendar + shot-due reminders. Leave unset if this is as-needed.
-              </p>
+              <DosePeriodField
+                period={dosePeriod}
+                time={doseTime}
+                onChange={({ period, time }) => {
+                  setDosePeriod(period);
+                  setDoseTime(time);
+                }}
+              />
             </div>
 
             <div className="space-y-2">
@@ -1032,7 +1125,9 @@ function AddInventoryModal({
             disabled={!name || !concentration || !totalVolume || (isKit && !Number(kitCount))}
             className="w-full bg-primary text-primary-foreground font-semibold rounded-xl p-4 mt-2 hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
-            {isKit
+            {isEditing
+              ? "Save changes"
+              : isKit
               ? `Add kit (${clampKitVialCount(Number(kitCount))} vials)`
               : "Add to Inventory"}
           </button>
