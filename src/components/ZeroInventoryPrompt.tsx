@@ -30,9 +30,9 @@ export function ZeroInventoryPrompt({
     <AlertDialog open={open} onOpenChange={(next) => !next && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Add inventory to log shots</AlertDialogTitle>
+          <AlertDialogTitle>Add inventory for reminders</AlertDialogTitle>
           <AlertDialogDescription>
-            Inventory is empty. Add a compound so you can log shots and get AM/PM shot-due reminders.
+            Inventory is empty. You can still log an ad-hoc shot by typing any compound. Add inventory for calendar and shot-due reminders.
           </AlertDialogDescription>
         </AlertDialogHeader>
         {notifMessage ? (

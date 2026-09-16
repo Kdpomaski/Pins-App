@@ -127,3 +127,23 @@ test('setting AM/PM overwrites a leftover 08:00 default', () => {
   const next = syncScheduleWithInventory(prev, [vial({ dosePeriod: 'PM', doseTime: '20:00' })]);
   assert.equal(next[0].time, '20:00');
 });
+
+test('custom clock time drives schedule instead of 08:00 / 21:00 defaults', () => {
+  const next = syncScheduleWithInventory([], [vial({ dosePeriod: 'PM', doseTime: '21:15' })]);
+  assert.equal(next.length, 1);
+  assert.equal(next[0].time, '21:15');
+});
+
+test('custom clock time overwrites a leftover 08:00 default', () => {
+  const prev = [{
+    id: 's1',
+    compound: 'BPC',
+    dose: 2,
+    unit: 'mg',
+    time: '08:00',
+    days: [1],
+    active: true,
+  }];
+  const next = syncScheduleWithInventory(prev, [vial({ dosePeriod: 'PM', doseTime: '21:15' })]);
+  assert.equal(next[0].time, '21:15');
+});

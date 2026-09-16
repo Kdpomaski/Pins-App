@@ -8,6 +8,7 @@ import {
   plusTwelveHours,
   resolveInventoryDoseTime,
   timeFromPeriod,
+  toggleOrSetPeriod,
 } from './dose-time.mjs';
 
 test('AM/PM map to schedule times without inventing a user choice', () => {
@@ -37,6 +38,16 @@ test('logged AM/PM vs schedule uses local wall clock', () => {
 test('labels and 2x/day counterpart stay AM/PM aware', () => {
   assert.equal(formatDoseTimeLabel('08:00'), '8:00 AM');
   assert.equal(formatDoseTimeLabel('20:00'), '8:00 PM');
+  assert.equal(formatDoseTimeLabel('21:15'), '9:15 PM');
   assert.equal(plusTwelveHours('08:00'), '20:00');
   assert.equal(plusTwelveHours('20:00'), '08:00');
+  assert.equal(plusTwelveHours('21:15'), '09:15');
+});
+
+test('AM/PM flip keeps a custom clock time instead of snapping to 08:00/20:00', () => {
+  assert.equal(toggleOrSetPeriod('21:15', 'PM'), '21:15');
+  assert.equal(toggleOrSetPeriod('21:15', 'AM'), '09:15');
+  assert.equal(toggleOrSetPeriod('07:30', 'PM'), '19:30');
+  assert.equal(toggleOrSetPeriod(undefined, 'AM'), '08:00');
+  assert.equal(toggleOrSetPeriod(undefined, 'PM'), '20:00');
 });

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { doseVolumeMl, type DoseUnit } from "@/lib/dose-volume";
+import { formatDoseTimeLabel } from "@/lib/dose-time";
 
 function Chip({ children }: { children: ReactNode }) {
   return (
@@ -34,9 +35,9 @@ export function ProtocolChips({
     concentration,
     concentrationUnit: concentrationUnit ?? doseUnit,
   });
-  const period = dosePeriod || (doseTime && Number(doseTime.slice(0, 2)) >= 12 ? "PM" : doseTime ? "AM" : null);
+  const timeLabel = formatDoseTimeLabel(doseTime) ?? dosePeriod ?? null;
 
-  if (!frequency && dose == null && !volume && !period) return null;
+  if (!frequency && dose == null && !volume && !timeLabel) return null;
 
   return (
     <div className={className}>
@@ -46,7 +47,7 @@ export function ProtocolChips({
           {dose} {doseUnit}/dose
         </Chip>
       ) : null}
-      {period ? <Chip>{period}</Chip> : null}
+      {timeLabel ? <Chip>{timeLabel}</Chip> : null}
       {volume ? <Chip>{volume.label}</Chip> : null}
     </div>
   );

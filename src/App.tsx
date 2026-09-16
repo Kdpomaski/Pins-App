@@ -108,17 +108,12 @@ function AppShell() {
   };
 
   const requestNewLog = useCallback((siteId?: string, compoundName?: string) => {
-    if (data.inventory.filter((item) => !item.deletedAt).length === 0) {
-      setNotifMessage('');
-      setEmptyInventoryOpen(true);
-      return;
-    }
     setPromptLog(null);
     setEditLog(null);
     setModalSiteId(siteId ?? null);
     setModalCompoundName(compoundName ?? null);
     setIsLogModalOpen(true);
-  }, [data.inventory]);
+  }, []);
 
   const requestEditLog = useCallback((log: InjectionLog) => {
     setPromptLog(log);

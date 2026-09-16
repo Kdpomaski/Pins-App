@@ -7,14 +7,14 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased — Kevin GO SoftPaywall OFF (build 15)
+## Unreleased — Kevin GO SoftPaywall OFF (build 16)
 
-- Restore Body Map Edit + Log new on history sites; keep ad-hoc CTA and empty-site ad-hoc
-- Inventory AM/PM time-of-day drives calendar schedule and shot-due notifications (no silent 08:00 default)
-- Log shots with the actual timestamp; if AM/PM differs from schedule, prompt to update future shots
-- Empty inventory prompts notifications + add inventory
+- Ad-hoc shot compound can be any name: pick from inventory or type free-text (save is not inventory-gated)
+- Inventory items are fully editable, including time of day
+- Time-of-day helper: `Used for the calendar and shot-due reminders. Not defaulted to 8:00 AM.`
+- Calendar and shot-due reminders use the chosen clock time (custom HH:mm, not stuck at 08:00 / 9:00 PM)
 - SoftPaywall OFF always
-- iOS `CURRENT_PROJECT_VERSION` 15; Android `versionCode` 15
+- iOS `CURRENT_PROJECT_VERSION` 16; Android `versionCode` 16
 
 ---
 

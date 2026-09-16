@@ -155,16 +155,8 @@ export function InjectionLoggerModal({
       setError("Select an injection site to save this ad-hoc shot.");
       return;
     }
-    if (!isEditing && data.inventory.length === 0) {
-      setError("Add a compound in Inventory before logging a shot.");
-      return;
-    }
-    if (!compound || !dose) {
-      setError("Select a compound and enter a dose.");
-      return;
-    }
-    if (!isEditing && !data.inventory.some((item) => item.name === compound)) {
-      setError("Add that compound in Inventory first.");
+    if (!compound.trim() || !dose) {
+      setError("Enter a compound and a dose.");
       return;
     }
 
@@ -180,10 +172,10 @@ export function InjectionLoggerModal({
       return;
     }
 
-    const inventoryItem = data.inventory.find((i) => i.name === compound);
+    const inventoryItem = data.inventory.find((i) => i.name === compound.trim());
     const payload = {
       siteId,
-      compound,
+      compound: compound.trim(),
       dose: doseNum,
       unit,
       timestamp,
@@ -221,7 +213,7 @@ export function InjectionLoggerModal({
     onClose();
   };
 
-  const canSave = Boolean(siteId && compound && dose && (isEditing || data.inventory.length > 0));
+  const canSave = Boolean(siteId && compound.trim() && dose);
 
   const selectedItem = data.inventory.find((item) => item.name === compound);
   const drawnVolume = doseVolumeMl({
@@ -296,7 +288,7 @@ export function InjectionLoggerModal({
                     </h2>
                     {adHocMode ? (
                       <p className="text-sm text-muted-foreground mt-2">
-                        Pick a site and compound, then Save — no calendar item required.
+                        Pick a site and a compound (from inventory or type any name), then Save.
                       </p>
                     ) : null}
                   </>
@@ -338,23 +330,21 @@ export function InjectionLoggerModal({
               </div>
             )}
 
-            {compoundOptions.length === 0 && !isEditing ? (
-              <div className="mb-5 rounded-xl border border-border bg-muted/30 p-4 text-center">
-                <p className="text-base text-muted-foreground">
-                  Add a compound in Inventory before logging a shot.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4 mb-5">
+            <div className="space-y-4 mb-5">
                 <div>
                   <label className="text-sm font-semibold text-muted-foreground block mb-2">
                     Compound
                   </label>
-                  <select
+                  <input
+                    list="adhoc-compound-options"
                     value={compound}
                     onChange={(e) => handleCompoundChange(e.target.value)}
-                    className="w-full bg-input/50 border-2 border-border rounded-xl p-4 text-lg font-medium text-foreground focus:ring-2 focus:ring-primary focus:outline-none appearance-none"
-                  >
+                    placeholder="Select from inventory or type any name"
+                    className="w-full bg-input/50 border-2 border-border rounded-xl p-4 text-lg font-medium text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                    autoComplete="off"
+                    data-testid="input-adhoc-compound"
+                  />
+                  <datalist id="adhoc-compound-options">
                     {compoundOptions.map((item) => (
                       <option key={item.name} value={item.name}>
                         {item.isBlend ? `${item.name} (blend)` : item.name}
@@ -363,7 +353,7 @@ export function InjectionLoggerModal({
                     {isEditing && editLog && !compoundOptions.some((item) => item.name === editLog.compound) ? (
                       <option value={editLog.compound}>{editLog.compound}</option>
                     ) : null}
-                  </select>
+                  </datalist>
                   {(() => {
                     const selected = compoundOptions.find((item) => item.name === compound);
                     const breakdown = selected?.isBlend
@@ -388,9 +378,15 @@ export function InjectionLoggerModal({
                       onChange={(e) => setDose(e.target.value)}
                       className="flex-1 bg-input/50 border-2 border-border rounded-xl p-4 text-2xl font-semibold text-foreground focus:ring-2 focus:ring-primary focus:outline-none min-w-0"
                     />
-                    <span className="text-lg font-bold text-muted-foreground shrink-0 w-12 text-center">
-                      {unit}
-                    </span>
+                    <select
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value as "mg" | "mcg")}
+                      className="text-lg font-bold bg-secondary border-2 border-border rounded-xl p-4 shrink-0"
+                      aria-label="Dose unit"
+                    >
+                      <option value="mcg">mcg</option>
+                      <option value="mg">mg</option>
+                    </select>
                   </div>
                   {(selectedItem?.frequency || drawnVolume) && (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -433,7 +429,6 @@ export function InjectionLoggerModal({
                   />
                 </div>
               </div>
-            )}
 
             {error && (
               <p className="text-base text-destructive font-medium mb-4" role="alert">
@@ -443,7 +438,7 @@ export function InjectionLoggerModal({
 
             <button
               onClick={handleSave}
-              disabled={!canSave || (!isEditing && compoundOptions.length === 0)}
+              disabled={!canSave}
               className="w-full bg-primary text-primary-foreground font-bold text-xl rounded-2xl py-5 flex items-center justify-center gap-3 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity active:scale-[0.98] mb-2"
             >
               <Check size={26} strokeWidth={3} />
