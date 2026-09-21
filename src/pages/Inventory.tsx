@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, X, Droplet, Info, ChevronDown, Check, Pencil, FlaskConical, Download } from "lucide-react";
 import { format } from "date-fns";
-import { formatBlendBreakdown, parseBlendComponents, type BlendAmountUnit } from "@/lib/blend";
+import {
+  blendTotalMass,
+  formatBlendBreakdown,
+  parseBlendComponents,
+  resolveInventoryConcentration,
+  type BlendAmountUnit,
+} from "@/lib/blend";
+import { concentrationFromRecon, doseVolumeMl } from "@/lib/dose-volume";
 import { ProtocolChips } from "@/components/ProtocolChips";
 import { usePinsStore, InventoryItem } from "@/lib/store";
 import { useEntitlements } from "@/lib/billing/entitlement-context";
 import { countProtocols } from "@/lib/billing/products";
-import { doseVolumeMl } from "@/lib/dose-volume";
 import {
   clampKitVialCount,
   DEFAULT_KIT_VIAL_COUNT,
@@ -329,7 +335,7 @@ function VialCard({
   const protocolVolume = doseVolumeMl({
     dose: item.defaultDose,
     doseUnit: item.unit,
-    concentration: item.concentration,
+    concentration: resolveInventoryConcentration(item),
     concentrationUnit: item.unit,
   });
 
@@ -403,7 +409,7 @@ function VialCard({
                 </p>
               )}
               <p className="text-xs text-muted-foreground mt-0.5">
-                {item.concentration} {item.unit}/ml
+                {(resolveInventoryConcentration(item) ?? item.concentration)} {item.unit}/ml
               </p>
               {item.isBlend && item.blendComponents?.length ? (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -493,7 +499,7 @@ function VialCard({
             frequency={item.frequency}
             dose={item.defaultDose}
             doseUnit={item.unit}
-            concentration={item.concentration}
+            concentration={resolveInventoryConcentration(item)}
             concentrationUnit={item.unit}
             dosePeriod={item.dosePeriod}
             doseTime={item.doseTime}
@@ -610,7 +616,7 @@ function VialCard({
                 )}
                 {protocolVolume && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {protocolVolume.label} from concentration
+                    {protocolVolume.label} from vial amount ÷ recon
                   </p>
                 )}
               </div>
@@ -653,9 +659,23 @@ function AddInventoryModal({
   const { requirePro, protocolCountFromData } = useEntitlements();
   const isEditing = Boolean(editItem);
   const [name, setName] = useState(editItem?.name ?? "");
-  const [concentration, setConcentration] = useState(
-    editItem?.concentration != null ? String(editItem.concentration) : "",
-  );
+  const initialVialAmount = (() => {
+    if (!editItem) return "";
+    if (editItem.isBlend && editItem.blendComponents?.length) {
+      const blendAmt = blendTotalMass(editItem.blendComponents, editItem.unit);
+      if (blendAmt != null) return String(blendAmt);
+    }
+    if (
+      editItem.concentration != null &&
+      editItem.totalVolume != null &&
+      editItem.totalVolume > 0
+    ) {
+      // Reverse of save: stored concentration is mg/ml → show vial peptide amount.
+      return String(Number((editItem.concentration * editItem.totalVolume).toPrecision(12)));
+    }
+    return editItem.concentration != null ? String(editItem.concentration) : "";
+  })();
+  const [vialAmount, setVialAmount] = useState(initialVialAmount);
   const [totalVolume, setTotalVolume] = useState(
     editItem?.totalVolume != null ? String(editItem.totalVolume) : "",
   );
@@ -695,23 +715,49 @@ function AddInventoryModal({
   const [error, setError] = useState("");
 
   const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
+  // When blend rows have mass amounts, keep vial amount in sync (KLOW etc.).
+  const blendMass = isBlend ? blendTotalMass(
+    blendRows
+      .filter((r) => r.name.trim() || r.amount.trim())
+      .map((r) => ({ name: r.name.trim() || "x", amount: Number(r.amount), unit: r.unit }))
+      .filter((r) => Number.isFinite(r.amount) && r.amount > 0) as { name: string; amount: number; unit: BlendAmountUnit }[],
+    unit,
+  ) : null;
+
+  useEffect(() => {
+    if (!isBlend) return;
+    if (blendMass == null) return;
+    setVialAmount(String(blendMass));
+  }, [isBlend, blendMass]);
+
   const draftVolume = doseVolumeMl({
     dose: defaultDose ? Number(defaultDose) : undefined,
     doseUnit: unit,
-    concentration: concentration ? Number(concentration) : undefined,
     concentrationUnit: unit,
+    vialAmount: vialAmount ? Number(vialAmount) : undefined,
+    reconVolumeMl: totalVolume ? Number(totalVolume) : undefined,
   });
 
+  const derivedConc = concentrationFromRecon(
+    vialAmount ? Number(vialAmount) : NaN,
+    totalVolume ? Number(totalVolume) : NaN,
+  );
+
   const handleSave = () => {
-    if (!name || !concentration || !totalVolume) {
-      setError("Compound name, concentration, and volume are required.");
+    if (!name || !vialAmount || !totalVolume) {
+      setError("Compound name, vial amount, and recon volume are required.");
       return;
     }
 
-    const conc = Number(concentration);
+    const amount = Number(vialAmount);
     const vol = Number(totalVolume);
-    if (!Number.isFinite(conc) || conc <= 0 || !Number.isFinite(vol) || vol <= 0) {
-      setError("Concentration and volume must be positive numbers.");
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(vol) || vol <= 0) {
+      setError("Vial amount and recon volume must be positive numbers.");
+      return;
+    }
+    const conc = concentrationFromRecon(amount, vol);
+    if (conc == null) {
+      setError("Could not derive concentration from vial amount ÷ recon volume.");
       return;
     }
 
@@ -865,7 +911,7 @@ function AddInventoryModal({
               <label htmlFor="add-as-kit" className="cursor-pointer">
                 <span className="block text-sm font-medium text-foreground">Add as kit</span>
                 <span className="block text-xs text-muted-foreground mt-0.5">
-                  Creates multiple identical vials (same compound, concentration, volume, and lot).
+                  Creates multiple identical vials (same compound, amount, recon volume, and lot).
                 </span>
               </label>
               {isKit && (
@@ -962,13 +1008,14 @@ function AddInventoryModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                Concentration <Info size={12} />
+                Vial amount <Info size={12} />
               </label>
               <div className="flex border border-border rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-primary">
                 <input
-                  type="number" placeholder="0.0" step="any"
-                  value={concentration}
-                  onChange={(e) => setConcentration(e.target.value)}
+                  type="number" placeholder="e.g. 80" step="any"
+                  value={vialAmount}
+                  onChange={(e) => setVialAmount(e.target.value)}
+                  readOnly={Boolean(isBlend && blendMass != null)}
                   className="w-full bg-input/50 p-3 text-foreground outline-none min-w-0"
                 />
                 <select
@@ -980,18 +1027,34 @@ function AddInventoryModal({
                   <option value="mcg">mcg</option>
                 </select>
               </div>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Total peptide in the vial (not mg/ml). Same as Recon Calculator.
+              </p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Volume (ml)</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recon volume (ml)</label>
               <input
-                type="number" placeholder="e.g. 2" step="any"
+                type="number" placeholder="e.g. 3" step="any"
                 value={totalVolume}
                 onChange={(e) => setTotalVolume(e.target.value)}
                 className="w-full bg-input/50 border border-border rounded-lg p-3 text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
               />
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                BAC water added. Conc = amount ÷ ml.
+              </p>
             </div>
           </div>
+
+          {derivedConc != null ? (
+            <p className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-xl px-4 py-3">
+              Derived concentration:{" "}
+              <span className="font-semibold text-foreground">
+                {Number(derivedConc.toPrecision(4))} {unit}/ml
+              </span>
+              {" "}(vial amount ÷ recon volume)
+            </p>
+          ) : null}
 
           {isEditing && (
             <div className="space-y-2">
@@ -1094,7 +1157,7 @@ function AddInventoryModal({
               </div>
               {draftVolume && (
                 <p className="text-xs text-muted-foreground">
-                  {draftVolume.label} from concentration
+                  {draftVolume.label} from vial amount ÷ recon
                 </p>
               )}
             </div>
@@ -1122,7 +1185,7 @@ function AddInventoryModal({
 
           <button
             onClick={handleSave}
-            disabled={!name || !concentration || !totalVolume || (isKit && !Number(kitCount))}
+            disabled={!name || !vialAmount || !totalVolume || (isKit && !Number(kitCount))}
             className="w-full bg-primary text-primary-foreground font-semibold rounded-xl p-4 mt-2 hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
             {isEditing

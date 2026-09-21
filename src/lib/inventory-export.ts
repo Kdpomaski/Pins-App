@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-import { formatBlendBreakdown } from '@/lib/blend';
+import { formatBlendBreakdown, resolveInventoryConcentration } from '@/lib/blend';
 import type { InventoryItem } from '@/lib/store';
 
 export type InventoryExportFormat = 'csv' | 'text';
@@ -113,7 +113,7 @@ export function buildInventoryText(items: InventoryItem[]): string {
     const blend = formatBlendBreakdown(item.blendComponents);
     const lines = [
       `${index + 1}. ${item.name}${item.isBlend ? ' [blend]' : ''}`,
-      `   Conc: ${item.concentration} ${item.unit}/ml`,
+      `   Conc: ${resolveInventoryConcentration(item) ?? item.concentration} ${item.unit}/ml`,
       `   Volume: ${item.remainingVolume} / ${item.totalVolume} ml`,
     ];
     if (item.frequency) lines.push(`   Frequency: ${item.frequency}`);

@@ -16,6 +16,8 @@ export function ProtocolChips({
   doseUnit,
   concentration,
   concentrationUnit,
+  vialAmount,
+  reconVolumeMl,
   dosePeriod,
   doseTime,
   className = "mt-3 flex flex-wrap items-center gap-3 relative z-10",
@@ -25,6 +27,9 @@ export function ProtocolChips({
   doseUnit: DoseUnit;
   concentration?: number | null;
   concentrationUnit?: DoseUnit;
+  /** Prefer with reconVolumeMl — vial peptide total, not mg/ml. */
+  vialAmount?: number | null;
+  reconVolumeMl?: number | null;
   dosePeriod?: "AM" | "PM" | null;
   doseTime?: string | null;
   className?: string;
@@ -34,6 +39,8 @@ export function ProtocolChips({
     doseUnit,
     concentration,
     concentrationUnit: concentrationUnit ?? doseUnit,
+    vialAmount,
+    reconVolumeMl,
   });
   const timeLabel = formatDoseTimeLabel(doseTime) ?? dosePeriod ?? null;
 

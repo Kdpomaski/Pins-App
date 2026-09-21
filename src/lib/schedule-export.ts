@@ -12,7 +12,7 @@ import {
 import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-import { formatBlendBreakdown, resolveBlendComponents } from '@/lib/blend';
+import { formatBlendBreakdown, resolveBlendComponents, resolveInventoryConcentration } from '@/lib/blend';
 import { plusTwelveHours, resolveInventoryDoseTime } from '@/lib/dose-time';
 import type { InjectionLog, InventoryItem, PinsData } from '@/lib/store';
 
@@ -82,7 +82,8 @@ export function remainingDoses(
 ): number {
   if (!dose || dose <= 0) return 0;
   const perDose = doseInInventoryUnits(dose, unit, item.unit);
-  const total = item.remainingVolume * item.concentration;
+  const conc = resolveInventoryConcentration(item) ?? item.concentration;
+  const total = item.remainingVolume * conc;
   return Math.max(0, Math.floor(total / perDose));
 }
 

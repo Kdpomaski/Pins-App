@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { resolveInventoryConcentration } from '@/lib/blend';
 import { ProtocolChips } from '@/components/ProtocolChips';
 import { sitesForView } from '@/lib/body-map-data';
 import { usePinsStore, type InventoryItem } from '@/lib/store';
@@ -160,7 +161,7 @@ const BodyMap: React.FC<{
                 frequency={selectedCompound.frequency}
                 dose={selectedCompound.defaultDose}
                 doseUnit={selectedCompound.unit}
-                concentration={selectedCompound.concentration}
+                concentration={resolveInventoryConcentration(selectedCompound)}
                 concentrationUnit={selectedCompound.unit}
                 dosePeriod={selectedCompound.dosePeriod}
                 doseTime={selectedCompound.doseTime}
