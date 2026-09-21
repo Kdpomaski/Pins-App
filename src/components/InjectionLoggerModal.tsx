@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, MapPin, Clock } from "lucide-react";
-import { formatBlendBreakdown } from "@/lib/blend";
+import { formatBlendBreakdown, resolveInventoryConcentration } from "@/lib/blend";
 import { doseVolumeMl } from "@/lib/dose-volume";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/datetime-local";
 import { usePinsStore } from "@/lib/store";
@@ -219,7 +219,7 @@ export function InjectionLoggerModal({
   const drawnVolume = doseVolumeMl({
     dose: dose ? Number(dose) : undefined,
     doseUnit: unit,
-    concentration: selectedItem?.concentration,
+    concentration: selectedItem ? resolveInventoryConcentration(selectedItem) : undefined,
     concentrationUnit: selectedItem?.unit ?? unit,
   });
 

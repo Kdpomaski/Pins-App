@@ -7,6 +7,16 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased — KLOW recon dose units (build 17)
+
+- Fix KLOW-style blend dose units: inventory now takes **vial peptide amount** + **recon volume (ml)** and derives concentration (amount ÷ ml), matching Recon Calculator
+- `doseVolumeMl` prefers `vialAmount` + `reconVolumeMl` over a raw concentration that users confuse with vial totals
+- Blend mass components auto-sum into vial amount; `resolveInventoryConcentration` uses sum ÷ volume so wrongly stored conc=80 @ 3ml still draws **15U** for a 4mg dose (not 5U)
+- SoftPaywall OFF always
+- iOS `CURRENT_PROJECT_VERSION` 17; Android `versionCode` 17
+
+---
+
 ## Unreleased — Kevin GO SoftPaywall OFF (build 16)
 
 - Ad-hoc shot compound can be any name: pick from inventory or type free-text (save is not inventory-gated)

@@ -1,4 +1,5 @@
 import type { InventoryItem } from '@/lib/store';
+import { resolveInventoryConcentration } from '@/lib/blend';
 
 export const DEPLETED_THRESHOLD_ML = 0.001;
 
@@ -38,7 +39,9 @@ export function deductVolumeFromCompound(
   if (target.unit === 'mg' && doseUnit === 'mcg') doseInVialUnits = dose / 1000;
   if (target.unit === 'mcg' && doseUnit === 'mg') doseInVialUnits = dose * 1000;
 
-  const volumeUsed = doseInVialUnits / target.concentration;
+  const conc = resolveInventoryConcentration(target);
+  if (conc == null) return inventory;
+  const volumeUsed = doseInVialUnits / conc;
 
   const updated = inventory.map((item) => {
     if (item.id !== target.id) return item;

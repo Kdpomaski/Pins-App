@@ -33,30 +33,74 @@ export function formatSyringeUnits(ml: number): string {
   return `${text} units`;
 }
 
+/**
+ * Concentration after reconstitution: vial peptide amount ÷ BAC / recon volume.
+ * Example: 80 mg vial / 3 ml recon → ≈ 26.667 mg/ml.
+ * Do NOT pass an already-derived mg/ml value here.
+ */
+export function concentrationFromRecon(
+  vialAmount: number,
+  reconVolumeMl: number,
+): number | null {
+  if (!Number.isFinite(vialAmount) || vialAmount <= 0) return null;
+  if (!Number.isFinite(reconVolumeMl) || reconVolumeMl <= 0) return null;
+  const conc = vialAmount / reconVolumeMl;
+  if (!Number.isFinite(conc) || conc <= 0) return null;
+  return conc;
+}
+
 export type DoseVolumeInput = {
   dose?: number | null;
   doseUnit: DoseUnit;
+  /**
+   * Already-derived concentration in mass-per-ml (e.g. 26.67 for "26.67 mg/ml").
+   * Ignored when vialAmount + reconVolumeMl are both provided.
+   */
   concentration?: number | null;
-  /** Unit the concentration is stored in (item.unit � e.g. mg in "10 mg/ml"). */
+  /** Unit the concentration is stored in (item.unit — e.g. mg in "10 mg/ml"). */
   concentrationUnit: DoseUnit;
+  /**
+   * Total peptide in the vial (NOT mg/ml). Preferred with reconVolumeMl —
+   * matches Recon Calculator: conc = vialAmount / reconVolumeMl.
+   */
+  vialAmount?: number | null;
+  /** BAC water / reconstitution volume in ml. */
+  reconVolumeMl?: number | null;
 };
 
 /**
  * Draw volume from concentration + dose.
- * 0.5 mg at 10 mg/ml ? 0.05 ml.
- * Returns null when concentration or dose is missing, or units cannot convert.
+ * Prefer vialAmount + reconVolumeMl (recon path) over a raw concentration that
+ * users often confuse with vial totals.
+ *
+ * KLOW example: 4 mg dose, 80 mg vial, 3 ml recon
+ *   → conc = 80/3 ≈ 26.67 mg/ml → 0.15 ml → 15 units (U-100)
+ * Bad path (vial total stuffed into concentration): 4/80 = 0.05 ml → 5 units.
  */
 export function doseVolumeMl(input: DoseVolumeInput): { ml: number; label: string } | null {
-  const { dose, doseUnit, concentration, concentrationUnit } = input;
+  const {
+    dose,
+    doseUnit,
+    concentration,
+    concentrationUnit,
+    vialAmount,
+    reconVolumeMl,
+  } = input;
   if (dose == null || !Number.isFinite(dose) || dose <= 0) return null;
-  if (concentration == null || !Number.isFinite(concentration) || concentration <= 0) {
+
+  const fromRecon = concentrationFromRecon(
+    vialAmount ?? NaN,
+    reconVolumeMl ?? NaN,
+  );
+  const effectiveConc = fromRecon ?? concentration;
+  if (effectiveConc == null || !Number.isFinite(effectiveConc) || effectiveConc <= 0) {
     return null;
   }
 
   const doseInConcUnit = convertDoseUnits(dose, doseUnit, concentrationUnit);
   if (doseInConcUnit == null) return null;
 
-  const ml = doseInConcUnit / concentration;
+  const ml = doseInConcUnit / effectiveConc;
   if (!Number.isFinite(ml) || ml <= 0) return null;
 
   return { ml, label: formatSyringeUnits(ml) };
