@@ -15,6 +15,7 @@ import { BottomNav } from '@/components/BottomNav';
 import { EditShotPrompt } from '@/components/EditShotPrompt';
 import { InjectionLoggerModal } from '@/components/InjectionLoggerModal';
 import { AuthGate } from '@/components/AuthGate';
+import { SettingsSheetProvider } from '@/components/SecuritySettings';
 import { SecurityGate } from '@/components/SecurityGate';
 import AuthCallback from '@/pages/AuthCallback';
 import { AuthProvider } from '@/lib/auth-context';
@@ -134,7 +135,8 @@ function AppShell() {
 
   return (
     <ShotActionsProvider value={shotActions}>
-      <div className="bg-background text-foreground min-h-[100dvh] font-sans selection:bg-primary/30">
+      <SettingsSheetProvider>
+        <div className="bg-background text-foreground min-h-[100dvh] font-sans selection:bg-primary/30">
         <ShotDueNotificationsSync />
         <ProtectedRouter />
         <BottomNav onOpenLogModal={() => requestNewLog()} />
@@ -181,7 +183,8 @@ function AppShell() {
           }}
         />
         <SoftPaywall />
-      </div>
+        </div>
+      </SettingsSheetProvider>
     </ShotActionsProvider>
   );
 }

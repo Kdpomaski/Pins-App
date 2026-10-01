@@ -16,7 +16,7 @@
 - **Dashboard** — streak, today's protocol, low-inventory alerts, recent pins
 - **PWA** — installable home-screen app with manifest and app icons
 - **Security** — AES-256-GCM encrypted local storage, optional passphrase lock, Zod input validation
-- **Beta auth** — Supabase email/password + Google sign-in; minimal anonymous profile (age range + gender)
+- **Beta auth** — Supabase email/password, Sign in with Apple, and Google; or continue without an account for the local tracker. Minimal anonymous profile (age range + gender). Permanent account deletion in Settings.
 
 ## Privacy
 
@@ -71,9 +71,10 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 1. Create a Supabase project at [supabase.com](https://supabase.com)
 2. Run `supabase/schema.sql` in the SQL editor
-3. Enable **Email** and **Google** providers under Authentication → Providers
+3. Enable **Email**, **Google**, and **Apple** providers under Authentication → Providers. Sign in with Apple for this app is already configured in Supabase (Services ID `com.two20tech.pins.siwa`). Do not commit the Apple private key (`.p8`).
 4. Set **Site URL** to your app origin (e.g. `http://localhost:5173`)
-5. Add redirect URL: `http://localhost:5173/auth/callback` (and production URL when deployed)
+5. Add redirect URLs: `http://localhost:5173/auth/callback`, the production `/auth/callback` URL, and the native deep link `com.two20tech.pins://auth/callback`
+6. Re-run `supabase/schema.sql` so `public.delete_own_account` exists before shipping a build that shows Delete account
 
 ## Scripts
 

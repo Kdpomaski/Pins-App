@@ -7,6 +7,16 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased — Apple review auth (build 18)
+
+- Sign in with Apple via the existing Supabase Apple provider and the same native OAuth deep link as Google (`com.two20tech.pins://auth/callback`). No Apple private key in the app.
+- Continue without an account for local tracker features (map, schedule, inventory, calculator)
+- Settings: permanent account deletion with typed confirmation (`delete_own_account` removes `auth.users`; not a deactivation)
+- SoftPaywall OFF always
+- Marketing version 1.0.1; iOS `CURRENT_PROJECT_VERSION` 18; Android `versionCode` 18
+
+---
+
 ## Unreleased — KLOW recon dose units (build 17)
 
 - Fix KLOW-style blend dose units: inventory now takes **vial peptide amount** + **recon volume (ml)** and derives concentration (amount ÷ ml), matching Recon Calculator

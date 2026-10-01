@@ -68,3 +68,33 @@ create policy "Users can update own entitlement"
 
 grant select, insert, update on table public.user_entitlements to authenticated;
 grant select on table public.user_entitlements to service_role;
+
+-- Permanent account deletion (App Store 5.1.1(v)).
+-- Apply in the Supabase SQL editor with the rest of this file.
+-- The client calls rpc('delete_own_account') with the user JWT.
+-- Do not put a service-role key or Apple .p8 in the app.
+-- This deletes auth.users (not a ban or a deactivated flag).
+-- public.profiles and public.user_entitlements cascade.
+create or replace function public.delete_own_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  current_uid uuid;
+begin
+  current_uid := auth.uid();
+  if current_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  delete from auth.users where id = current_uid;
+end;
+$$;
+
+revoke all on function public.delete_own_account() from public;
+grant execute on function public.delete_own_account() to authenticated;
+
+comment on function public.delete_own_account() is
+  'Permanently deletes the signed-in auth user. Cascades profiles and entitlements. Not a deactivation.';

@@ -15,10 +15,12 @@ import {
   completeAuthFromUrl,
   hasAuthCallbackParams,
 } from '@/lib/auth-callback';
+import { deleteOwnAccount } from '@/lib/delete-account';
+import { readGuestMode, writeGuestMode } from '@/lib/guest-mode';
 import { getAuthRedirectUrl, isSupabaseConfigured, supabase } from '@/lib/supabase';
-import { ensureNativeAuthDeepLinkListener, startGoogleOAuth } from '@/lib/native-oauth';
+import { ensureNativeAuthDeepLinkListener, startAppleOAuth, startGoogleOAuth } from '@/lib/native-oauth';
 
-type AuthStatus = 'loading' | 'unauthenticated' | 'onboarding' | 'authenticated';
+type AuthStatus = 'loading' | 'unauthenticated' | 'guest' | 'onboarding' | 'authenticated';
 
 type AuthContextValue = {
   status: AuthStatus;
@@ -29,8 +31,14 @@ type AuthContextValue = {
   signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
   signUpWithEmail: (email: string, password: string) => Promise<{ error?: string; needsConfirmation?: boolean }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
+  signInWithApple: () => Promise<{ error?: string }>;
+  continueAsGuest: () => void;
+  exitGuestMode: () => void;
+  deleteAccount: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  nativeAuthError: string | null;
+  clearNativeAuthError: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -46,13 +54,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [nativeAuthError, setNativeAuthError] = useState<string | null>(null);
 
   const loadProfile = useCallback(async (nextSession: Session | null) => {
     if (!nextSession?.user) {
       setProfile(null);
-      setStatus('unauthenticated');
+      setStatus(readGuestMode() ? 'guest' : 'unauthenticated');
       return;
     }
+
+    writeGuestMode(false);
 
     try {
       const nextProfile = await fetchProfile(nextSession.user.id);
@@ -66,6 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
+      if (readGuestMode()) {
+        setStatus('guest');
+        return;
+      }
       setStatus(import.meta.env.DEV ? 'authenticated' : 'unauthenticated');
       return;
     }
@@ -118,8 +133,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   }, []);
 
+  const signInWithApple = useCallback(async () => {
+    const { error } = await startAppleOAuth();
+    return { error };
+  }, []);
+
+  const continueAsGuest = useCallback(() => {
+    writeGuestMode(true);
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setStatus('guest');
+  }, []);
+
+  const exitGuestMode = useCallback(() => {
+    writeGuestMode(false);
+    setStatus('unauthenticated');
+  }, []);
+
+  const deleteAccount = useCallback(async () => {
+    const result = await deleteOwnAccount();
+    if (result.error) return result;
+    writeGuestMode(false);
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setStatus('unauthenticated');
+    return {};
+  }, []);
+
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    writeGuestMode(false);
+    if (isSupabaseConfigured) {
+      await supabase.auth.signOut();
+    }
     setSession(null);
     setUser(null);
     setProfile(null);
@@ -131,11 +178,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile, session]);
 
 
+  const clearNativeAuthError = useCallback(() => {
+    setNativeAuthError(null);
+  }, []);
+
   useEffect(() => {
     ensureNativeAuthDeepLinkListener((result) => {
       if (result.error) {
         console.warn('[auth] native oauth callback', result.error);
+        setNativeAuthError(result.error);
+        return;
       }
+      setNativeAuthError(null);
       // onAuthStateChange picks up the new session after exchangeCodeForSession
     });
   }, []);
@@ -150,8 +204,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       signUpWithEmail,
       signInWithGoogle,
+      signInWithApple,
+      continueAsGuest,
+      exitGuestMode,
+      deleteAccount,
       signOut,
       refreshProfile,
+      nativeAuthError,
+      clearNativeAuthError,
     }),
     [
       status,
@@ -161,8 +221,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       signUpWithEmail,
       signInWithGoogle,
+      signInWithApple,
+      continueAsGuest,
+      exitGuestMode,
+      deleteAccount,
       signOut,
       refreshProfile,
+      nativeAuthError,
+      clearNativeAuthError,
     ],
   );
 
