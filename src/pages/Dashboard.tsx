@@ -1,12 +1,11 @@
-import { useState } from "react";
 import { format, differenceInHours } from "date-fns";
-import { Flame, Syringe, Droplets, Droplet, Calculator, Shield } from "lucide-react";
+import { Flame, Syringe, Droplets, Droplet, Calculator, Settings } from "lucide-react";
 import { Link } from "wouter";
 import { formatBlendBreakdown, resolveBlendComponents } from "@/lib/blend";
 import { usePinsStore } from "@/lib/store";
 import { useShotActions } from "@/lib/shot-actions";
 import { formatDoseTimeLabel } from "@/lib/dose-time";
-import { SecurityBadge, SecuritySettings } from "@/components/SecuritySettings";
+import { SecurityBadge, useOpenSettings } from "@/components/SecuritySettings";
 
 // ── Brand logo matching the uploaded Pins identity ────────────────────────────
 function PinsLogoIcon({ size = 36 }: { size?: number }) {
@@ -57,7 +56,7 @@ function PinsHeader() {
 export default function Dashboard() {
   const { data } = usePinsStore();
   const { requestEditLog } = useShotActions();
-  const [securityOpen, setSecurityOpen] = useState(false);
+  const openSettings = useOpenSettings();
 
   const todayStr   = format(new Date(), "EEEE");
   const todayIndex = new Date().getDay();
@@ -101,11 +100,11 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSecurityOpen(true)}
+              onClick={openSettings}
               className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
-              aria-label="Security settings"
+              aria-label="Settings"
             >
-              <Shield size={18} />
+              <Settings size={18} />
             </button>
             <Link
               href="/calculator"
@@ -116,8 +115,6 @@ export default function Dashboard() {
             </Link>
           </div>
         </header>
-
-        <SecuritySettings open={securityOpen} onClose={() => setSecurityOpen(false)} />
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-4">

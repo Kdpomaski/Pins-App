@@ -26,6 +26,15 @@ export function TermsContent() {
       </section>
 
       <section>
+        <h3 className="text-foreground font-semibold mb-2">Account</h3>
+        <p>
+          You can use the local tracker without creating an account. If you create an account, you can
+          permanently delete it in Settings. Deletion removes the sign-in and the profile stored with it.
+          It is not a deactivation.
+        </p>
+      </section>
+
+      <section>
         <h3 className="text-foreground font-semibold mb-2">Beta Disclaimer</h3>
         <p>
           Pins is in beta. Features may change or be unavailable. Always consult a qualified

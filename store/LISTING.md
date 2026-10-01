@@ -2,7 +2,7 @@
 
 **Publisher:** 220 TECH LLC  
 **Bundle ID / applicationId:** `com.two20tech.pins`  
-**Version:** 1.0.1  
+**Version:** 1.0.1 (18)  
 **Category:** Health & Fitness  
 **Content rating:** 12+ / Teen (health tracking, not for children)  
 **Support email:** Customerservice@220bioworx.com  
@@ -23,7 +23,7 @@ Private injection & protocol tracker. Your logs stay on your device.
 
 Pins is a local-first visual tracker for injection protocols, inventory, and schedules.
 
-Log sites on a body map, track vials, set a weekly schedule, and export calendar events. Data is encrypted on your device. Optional account sign-in stores only your email plus anonymous age range and gender — never your protocol.
+Log sites on a body map, track vials, set a weekly schedule, and export calendar events. Data is encrypted on your device. Use the tracker without an account, or sign in with Apple, Google, or email. An account stores only your email plus anonymous age range and gender — never your protocol. You can permanently delete an account in Settings.
 
 Pins is a personal organization tool. It is not a medical device and does not provide medical advice.
 

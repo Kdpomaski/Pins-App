@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { FcGoogle } from 'react-icons/fc';
+import { SiApple } from 'react-icons/si';
 import { Mail, Lock } from 'lucide-react';
 import { supabase, getAuthRedirectUrl, isSupabaseConfigured } from '@/lib/supabase';
-import { startGoogleOAuth } from '@/lib/native-oauth';
+import { startAppleOAuth, startGoogleOAuth } from '@/lib/native-oauth';
+import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 
 type AuthMode = 'sign-in' | 'sign-up';
@@ -19,6 +21,7 @@ function formatSignInError(message: string): string {
 }
 
 export default function Auth() {
+  const { continueAsGuest, nativeAuthError, clearNativeAuthError } = useAuth();
   const [mode, setMode] = useState<AuthMode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,6 +34,7 @@ export default function Auth() {
     setError('');
     setInfo('');
     setShowResend(false);
+    clearNativeAuthError();
   };
 
   if (!isSupabaseConfigured) {
@@ -39,8 +43,11 @@ export default function Auth() {
         <div className="w-full max-w-md border border-border rounded-2xl bg-card p-6 space-y-3 text-sm">
           <h1 className="text-lg font-semibold">Sign-in unavailable</h1>
           <p className="text-muted-foreground">
-            This build was shipped without authentication configuration. Please update to the latest TestFlight build.
+            This build was shipped without authentication configuration. You can still use the local tracker without an account.
           </p>
+          <Button className="w-full" onClick={continueAsGuest}>
+            Continue without an account
+          </Button>
         </div>
       </div>
     );
@@ -127,6 +134,18 @@ export default function Auth() {
     setLoading(false);
   };
 
+  const appleSignIn = async () => {
+    resetMessages();
+    setLoading(true);
+    const { error: oauthError } = await startAppleOAuth();
+    if (oauthError) {
+      setError(oauthError);
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+  };
+
   const handleSubmit = () => {
     if (mode === 'sign-in') void signIn();
     else void signUp();
@@ -143,7 +162,9 @@ export default function Auth() {
           />
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Welcome to Pins</h1>
-          <p className="text-xs text-muted-foreground mt-1">Sign in with Email or Google.</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Sign in with Apple, Google, or email — or continue on this device without an account.
+          </p>
             <p className="text-sm text-muted-foreground mt-1">
               Beta · Peptide &amp; Injection Protocol Tracker
             </p>
@@ -171,6 +192,17 @@ export default function Auth() {
 
           <Button
             type="button"
+            className="w-full bg-black text-white border-black"
+            style={{ backgroundColor: '#000000', color: '#ffffff', borderColor: '#000000' }}
+            disabled={loading}
+            onClick={() => void appleSignIn()}
+          >
+            <SiApple className="text-lg" aria-hidden />
+            Continue with Apple
+          </Button>
+
+          <Button
+            type="button"
             variant="outline"
             className="w-full"
             disabled={loading}
@@ -179,6 +211,19 @@ export default function Auth() {
             <FcGoogle className="text-lg" />
             Continue with Google
           </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={loading}
+            onClick={continueAsGuest}
+          >
+            Continue without an account
+          </Button>
+          <p className="text-xs text-muted-foreground text-center -mt-2">
+            Map, schedule, inventory, and calculator stay on this device. No account needed.
+          </p>
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <div className="h-px flex-1 bg-border" />
@@ -210,9 +255,9 @@ export default function Auth() {
             </div>
           </div>
 
-          {error && (
+          {(error || nativeAuthError) && (
             <p className="text-sm text-destructive" role="alert">
-              {error}
+              {error || nativeAuthError}
             </p>
           )}
           {info && (

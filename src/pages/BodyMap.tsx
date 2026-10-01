@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { format } from 'date-fns';
+import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useOpenSettings } from '@/components/SecuritySettings';
 import { Card } from '@/components/ui/card';
 import { resolveInventoryConcentration } from '@/lib/blend';
 import { ProtocolChips } from '@/components/ProtocolChips';
@@ -30,6 +32,7 @@ const BodyMap: React.FC<{
   logs = [],
 }) => {
   const { data } = usePinsStore();
+  const openSettings = useOpenSettings();
   const [view, setView] = useState<'front' | 'back'>('front');
   const [selectedCompound, setSelectedCompound] = useState<InventoryItem | null>(null);
 
@@ -84,6 +87,14 @@ const BodyMap: React.FC<{
               <span className="hidden sm:inline"> · hover for dates</span>
               <span className="sm:hidden"> · dates show on pins & in popup</span>
             </p>
+            <button
+              type="button"
+              onClick={openSettings}
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium border border-border bg-background px-3 py-1.5 rounded-full"
+            >
+              <Settings size={14} />
+              Settings
+            </button>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {onAdHoc && (

@@ -23,7 +23,7 @@ and App Store Connect → App Privacy.
 ## Encryption
 - In transit: Yes (HTTPS to Supabase if they sign in)
 - At rest on device: Yes (AES-256-GCM)
-- Users can request deletion: Yes (email support)
+- Users can delete their account: Yes — in the app, Settings → Delete account (permanent; removes the auth user). Email support remains a backup.
 
 ## Approximate location / tracking
 Not used. Do not check “Used for tracking” on Apple.

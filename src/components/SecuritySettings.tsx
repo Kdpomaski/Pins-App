@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Lock, LogOut, Shield, X } from 'lucide-react';
+import { Bell, LogOut, Settings, Shield, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { DELETE_ACCOUNT_CONFIRMATION, isPermanentDeleteConfirmed } from '@/lib/delete-account';
 import { useSecurity } from '@/lib/security-context';
 import { PRIVACY } from '@/lib/privacy';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,7 @@ export function SecurityBadge() {
 }
 
 export function SecuritySettings({ open, onClose }: SecuritySettingsProps) {
-  const { user, signOut } = useAuth();
+  const { user, status, signOut, deleteAccount, exitGuestMode } = useAuth();
   const { encryptionMode, enablePassphrase, lock } = useSecurity();
   const { data } = usePinsStore();
   const [passphrase, setPassphrase] = useState('');
@@ -43,6 +44,10 @@ export function SecuritySettings({ open, onClose }: SecuritySettingsProps) {
   const [loading, setLoading] = useState(false);
   const [shotDueOn, setShotDueOn] = useState(getShotDueNotificationsEnabled);
   const [notifMsg, setNotifMsg] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const handleShotDueToggle = async (next: boolean) => {
     setNotifMsg('');
@@ -68,9 +73,27 @@ export function SecuritySettings({ open, onClose }: SecuritySettingsProps) {
     setPassphrase('');
     setConfirm('');
     setError('');
+    setConfirmDelete(false);
+    setDeleteText('');
+    setDeleteError('');
   };
 
   const handleClose = () => {
+    if (deleting) return;
+    resetForm();
+    onClose();
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!isPermanentDeleteConfirmed(deleteText)) return;
+    setDeleting(true);
+    setDeleteError('');
+    const result = await deleteAccount();
+    if (result.error) {
+      setDeleteError(result.error);
+      setDeleting(false);
+      return;
+    }
     resetForm();
     onClose();
   };
@@ -114,12 +137,12 @@ export function SecuritySettings({ open, onClose }: SecuritySettingsProps) {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border rounded-t-3xl max-w-md mx-auto shadow-2xl p-6 pb-safe"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border rounded-t-3xl max-w-md mx-auto shadow-2xl p-6 pb-safe max-h-[92dvh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-5">
               <div className="flex items-center gap-2">
-                <Lock size={18} className="text-primary" />
-                <h2 className="text-lg font-semibold">Security</h2>
+                <Settings size={18} className="text-primary" />
+                <h2 className="text-lg font-semibold">Settings</h2>
               </div>
               <button
                 onClick={handleClose}
@@ -139,8 +162,95 @@ export function SecuritySettings({ open, onClose }: SecuritySettingsProps) {
                   <li>Account stores age range &amp; gender only (anonymous stats)</li>
                   <li>E2E cloud backup not enabled yet</li>
                 </ul>
-                {user?.email && (
-                  <p className="text-xs text-muted-foreground pt-1">Signed in as {user.email}</p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-background/50 p-4 space-y-3">
+                <p className="font-medium">Account</p>
+                {user ? (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Signed in as {user.email ?? 'your Pins account'}
+                    </p>
+                    <Button variant="outline" className="w-full" onClick={() => void signOut()}>
+                      <LogOut size={16} />
+                      Sign out
+                    </Button>
+                    {confirmDelete ? (
+                      <div className="space-y-3 rounded-xl border border-destructive/40 bg-destructive/5 p-3">
+                        <p className="text-sm font-medium text-destructive">Delete account permanently?</p>
+                        <p className="text-xs text-muted-foreground">
+                          This permanently deletes your Pins account. It is not a deactivation and cannot be undone.
+                          We remove the sign-in (Apple, Google, or email) and the profile stored with it (age range
+                          and gender). Injection logs, inventory, and schedule are stored only on this device and
+                          stay on this device.
+                        </p>
+                        <label className="block text-xs text-muted-foreground" htmlFor="delete-account-confirm">
+                          Type {DELETE_ACCOUNT_CONFIRMATION} to confirm
+                        </label>
+                        <input
+                          id="delete-account-confirm"
+                          value={deleteText}
+                          onChange={(e) => setDeleteText(e.target.value)}
+                          autoComplete="off"
+                          autoCapitalize="characters"
+                          placeholder={DELETE_ACCOUNT_CONFIRMATION}
+                          className="w-full border border-border rounded-lg p-3 bg-input/30 text-foreground focus:ring-1 focus:ring-destructive focus:outline-none"
+                        />
+                        {deleteError && <p className="text-xs text-destructive">{deleteError}</p>}
+                        <Button
+                          variant="destructive"
+                          className="w-full"
+                          disabled={deleting || !isPermanentDeleteConfirmed(deleteText)}
+                          onClick={() => void handleDeleteAccount()}
+                        >
+                          <Trash2 size={16} />
+                          {deleting ? 'Deleting account…' : 'Permanently delete account'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          disabled={deleting}
+                          onClick={() => {
+                            setConfirmDelete(false);
+                            setDeleteText('');
+                            setDeleteError('');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="w-full text-destructive"
+                        onClick={() => setConfirmDelete(true)}
+                      >
+                        <Trash2 size={16} />
+                        Delete account
+                      </Button>
+                    )}
+                  </>
+                ) : status === 'guest' ? (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      No account. Map, schedule, inventory, and calculator stay on this device.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        exitGuestMode();
+                        onClose();
+                      }}
+                    >
+                      Sign in or create an account
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" className="w-full" onClick={() => void signOut()}>
+                    <LogOut size={16} />
+                    Sign out
+                  </Button>
                 )}
               </div>
 
@@ -213,18 +323,29 @@ export function SecuritySettings({ open, onClose }: SecuritySettingsProps) {
                 {notifMsg && <p className="text-xs text-destructive">{notifMsg}</p>}
               </div>
 
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => void signOut()}
-              >
-                <LogOut size={16} />
-                Sign out
-              </Button>
             </div>
           </motion.div>
         </>
       )}
     </AnimatePresence>
   );
+}
+
+const OpenSettingsContext = createContext<(() => void) | null>(null);
+
+/** Settings sheet for the signed-in app. Mount once inside PinsProvider. */
+export function SettingsSheetProvider({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <OpenSettingsContext.Provider value={() => setOpen(true)}>
+      {children}
+      <SecuritySettings open={open} onClose={() => setOpen(false)} />
+    </OpenSettingsContext.Provider>
+  );
+}
+
+export function useOpenSettings(): () => void {
+  const openSettings = useContext(OpenSettingsContext);
+  if (!openSettings) throw new Error('useOpenSettings must be used within SettingsSheetProvider');
+  return openSettings;
 }
